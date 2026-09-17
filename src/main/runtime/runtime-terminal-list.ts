@@ -148,6 +148,14 @@ export class RuntimeTerminalList {
     const matching = requestedHandles
       ? terminals.filter((terminal) => requestedHandles.has(terminal.handle))
       : terminals
+    const worktreeIndexCounters = new Map<string, number>()
+    for (const terminal of matching) {
+      const nextIndex = (worktreeIndexCounters.get(terminal.worktreeId) ?? 0) + 1
+      worktreeIndexCounters.set(terminal.worktreeId, nextIndex)
+      terminal.index = nextIndex
+      terminal.target = `@${nextIndex}`
+      terminal.label = terminal.title || null
+    }
     const listed = matching.slice(0, limit)
     const snapshots = this.deps.getSnapshots()
     const visualLayouts =
