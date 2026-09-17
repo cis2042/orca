@@ -3,19 +3,22 @@ import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 /**
+ * Checks if the current process is running as Orcagent.
+ */
+export function isOrcagentProcess(): boolean {
+  const execPath = process.execPath || ''
+  return (
+    execPath.includes('Orcagent') ||
+    process.env.ORCA_PRODUCT_NAME === 'Orcagent' ||
+    app.getName().toLowerCase() === 'orcagent'
+  )
+}
+
+/**
  * Ensures Orcagent inherits all user profiles, accounts, and workspace settings
  * from the existing Orca installation without modifying or overwriting Orca.
  */
 export function seedOrcagentUserDataIfMissing(userDataPath: string): void {
-  const isOrcagent =
-    app.getName().toLowerCase() === 'orcagent' ||
-    process.env.ORCA_PRODUCT_NAME === 'Orcagent' ||
-    userDataPath.toLowerCase().includes('orcagent')
-
-  if (!isOrcagent) {
-    return
-  }
-
   const appData = app.getPath('appData')
   const orcaDir = join(appData, 'orca')
   if (!existsSync(orcaDir)) {
@@ -51,4 +54,20 @@ export function seedOrcagentUserDataIfMissing(userDataPath: string): void {
   } catch (err) {
     console.warn('[orcagent] Failed to seed user settings from Orca:', err)
   }
+}
+
+/**
+ * Configures Orcagent's dedicated userData directory so it does not collide
+ * with a concurrently running Orca instance, while sharing all settings.
+ */
+export function configureOrcagentUserData(): boolean {
+  if (!isOrcagentProcess()) {
+    return false
+  }
+  const appData = app.getPath('appData')
+  const orcagentUserData = join(appData, 'orcagent')
+  app.setPath('userData', orcagentUserData)
+  app.setName('Orcagent')
+  seedOrcagentUserDataIfMissing(orcagentUserData)
+  return true
 }
