@@ -62,9 +62,12 @@ const devChannelRepo = isHourlyChannel
   : isDailyChannel
     ? 'orca-daily'
     : isAdhocChannel
-      ? 'orca-adhoc'
-      : null
-const appId = 'com.stablyai.orca'
+const productName = process.env.ORCA_PRODUCT_NAME || 'Orca'
+const appId =
+  process.env.ORCA_APP_ID ||
+  (process.env.ORCA_PRODUCT_NAME
+    ? `com.stablyai.${process.env.ORCA_PRODUCT_NAME.toLowerCase()}`
+    : 'com.stablyai.orca')
 const featureWallResources = {
   from: 'resources/onboarding/feature-wall',
   to: 'onboarding/feature-wall'
@@ -161,8 +164,8 @@ const windowsRuntimeResources = existsSync(
 /** @type {import('electron-builder').Configuration} */
 module.exports = {
   appId,
-  productName: 'Orca',
-  protocols: [{ name: 'Orca', schemes: ['orca'] }],
+  productName,
+  protocols: [{ name: productName, schemes: [productName.toLowerCase(), 'orca'] }],
   toolsets: { appimage: '1.0.3' },
   ...(devChannelBuildVersion
     ? { extraMetadata: { version: devChannelBuildVersion } }

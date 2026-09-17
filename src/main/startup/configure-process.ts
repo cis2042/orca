@@ -6,6 +6,7 @@ import { getVersionManagerBinPaths } from '../codex-cli/command'
 import { getMainE2EConfig } from '../e2e-config'
 import { DISABLED_CHROMIUM_FEATURES } from './disabled-chromium-features'
 import { readHttp1CompatibilityMarker } from './http1-compatibility-marker'
+import { seedOrcagentUserDataIfMissing } from './orcagent-shared-settings'
 
 const DEV_PARENT_SHUTDOWN_GRACE_MS = 3000
 const HTTP1_COMPATIBILITY_ENV_VAR = 'ORCA_DISABLE_HTTP2'
@@ -209,6 +210,7 @@ export function configureDevUserDataPath(isDev: boolean): void {
   }
 
   if (!isDev) {
+    seedOrcagentUserDataIfMissing(app.getPath('userData'))
     return
   }
   const overrideUserDataPath = process.env.ORCA_DEV_USER_DATA_PATH
