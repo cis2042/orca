@@ -24,27 +24,39 @@ export async function resolveTerminalTarget(
 
   if (indexMatch) {
     const targetIdx = Number.parseInt(indexMatch[1], 10)
-    const matched = terminals.find(
+    const matching = terminals.filter(
       (t, idx) => t.index === targetIdx || (!t.index && idx + 1 === targetIdx)
     )
-    if (!matched) {
+    if (matching.length === 0) {
       throw new RuntimeClientError(
         'selector_not_found',
         `No terminal found with index ${targetIdx} (target "${target}")`
       )
     }
-    return matched.handle
+    if (matching.length > 1) {
+      throw new RuntimeClientError(
+        'invalid_argument',
+        `Ambiguous terminal target "${target}": matches ${matching.length} terminals. Specify a worktree.`
+      )
+    }
+    return matching[0].handle
   }
 
   const rawLabel = target.slice(1).trim()
-  const matched = terminals.find(
+  const matching = terminals.filter(
     (t) => t.label === rawLabel || t.title === rawLabel || t.title === target
   )
-  if (!matched) {
+  if (matching.length === 0) {
     throw new RuntimeClientError(
       'selector_not_found',
       `No terminal found with label "${rawLabel}" (target "${target}")`
     )
   }
-  return matched.handle
+  if (matching.length > 1) {
+    throw new RuntimeClientError(
+      'invalid_argument',
+      `Ambiguous terminal target "${target}": matches ${matching.length} terminals. Use a unique label or handle.`
+    )
+  }
+  return matching[0].handle
 }

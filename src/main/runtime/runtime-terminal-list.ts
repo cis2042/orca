@@ -144,18 +144,18 @@ export class RuntimeTerminalList {
       }
       terminals.push(this.deps.buildPtySummary(pty, worktreesById))
     }
-    const requestedHandles = opts.handles ? new Set(opts.handles) : null
-    const matching = requestedHandles
-      ? terminals.filter((terminal) => requestedHandles.has(terminal.handle))
-      : terminals
     const worktreeIndexCounters = new Map<string, number>()
-    for (const terminal of matching) {
+    for (const terminal of terminals) {
       const nextIndex = (worktreeIndexCounters.get(terminal.worktreeId) ?? 0) + 1
       worktreeIndexCounters.set(terminal.worktreeId, nextIndex)
       terminal.index = nextIndex
       terminal.target = `@${nextIndex}`
       terminal.label = terminal.title || null
     }
+    const requestedHandles = opts.handles ? new Set(opts.handles) : null
+    const matching = requestedHandles
+      ? terminals.filter((terminal) => requestedHandles.has(terminal.handle))
+      : terminals
     const listed = matching.slice(0, limit)
     const snapshots = this.deps.getSnapshots()
     const visualLayouts =
