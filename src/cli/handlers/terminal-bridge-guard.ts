@@ -60,7 +60,7 @@ export function clearRead(handle: string): void {
 
 export function formatBridgeList(
   result: RuntimeTerminalListResult,
-  browserTabs?: Array<{ browserPageId: string; index?: number; url: string; title?: string; active?: boolean }>
+  browserTabs?: { browserPageId: string; index?: number; url: string; title?: string; active?: boolean }[]
 ): string {
   const outputLines: string[] = []
   if (result.terminals.length === 0) {
