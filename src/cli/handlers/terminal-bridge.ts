@@ -4,6 +4,7 @@ import type {
   RuntimeTerminalRename,
   RuntimeTerminalSend
 } from '../../shared/runtime-types'
+import { parseTerminalIndex } from '../../shared/terminal-a2a-link'
 import type { CommandHandler, HandlerContext } from '../dispatch'
 import { getOptionalPositiveIntegerFlag, getOptionalStringFlag } from '../flags'
 import { printResult } from '../format'
@@ -61,6 +62,35 @@ async function resolveSenderIdentity(
   }
 
   return { from: 'orca-cli', handle: 'caller', worktreeLabel }
+}
+
+async function emitA2ATrace(
+  client: HandlerContext['client'],
+  args: {
+    fromDisplay?: string
+    fromLabel?: string
+    targetDisplay: string
+    handle: string
+    type: 'send' | 'message' | 'type' | 'keys'
+    text?: string
+  }
+): Promise<void> {
+  try {
+    const fromIndex = parseTerminalIndex(args.fromDisplay)
+    const toIndex = parseTerminalIndex(args.targetDisplay)
+    await client.call('terminal.a2aLink', {
+      from: args.fromDisplay || 'caller',
+      to: args.targetDisplay,
+      fromIndex,
+      toIndex,
+      fromLabel: args.fromLabel,
+      type: args.type,
+      text: args.text ? args.text.slice(0, 120) : undefined,
+      timestamp: Date.now()
+    })
+  } catch {
+    // Non-blocking visual trace feedback: ignore failure if host lacks method or offline
+  }
 }
 
 export const bridgeListHandler: CommandHandler = async (ctx) => {
@@ -122,7 +152,7 @@ export const bridgeTypeHandler: CommandHandler = async (ctx) => {
   const target = getOptionalStringFlag(ctx.flags, 'target') || ctx.rawArgs?.[0]
   const text = getOptionalStringFlag(ctx.flags, 'text') ?? ctx.rawArgs?.slice(1).join(' ') ?? ''
   const noGuard = ctx.flags.get('no-read-guard') === true || ctx.flags.get('force') === true
-  const { handle, targetDisplay } = await resolveTargetAndHandle(target, ctx)
+  const { handle, targetDisplay, worktree } = await resolveTargetAndHandle(target, ctx)
 
   requireRead(handle, targetDisplay, noGuard)
 
@@ -135,6 +165,17 @@ export const bridgeTypeHandler: CommandHandler = async (ctx) => {
 
   clearRead(handle)
 
+  if (result.result.send.accepted) {
+    const sender = await resolveSenderIdentity(ctx.client, worktree)
+    await emitA2ATrace(ctx.client, {
+      fromDisplay: sender.from,
+      targetDisplay,
+      handle,
+      type: 'type',
+      text
+    })
+  }
+
   if (ctx.json) {
     console.log(JSON.stringify(result.result.send))
   } else if (!result.result.send.accepted) {
@@ -146,7 +187,7 @@ export const bridgeSendHandler: CommandHandler = async (ctx) => {
   const target = getOptionalStringFlag(ctx.flags, 'target') || ctx.rawArgs?.[0]
   const text = getOptionalStringFlag(ctx.flags, 'text') ?? ctx.rawArgs?.slice(1).join(' ') ?? ''
   const noGuard = ctx.flags.get('no-read-guard') === true || ctx.flags.get('force') === true
-  const { handle, targetDisplay } = await resolveTargetAndHandle(target, ctx)
+  const { handle, targetDisplay, worktree } = await resolveTargetAndHandle(target, ctx)
 
   requireRead(handle, targetDisplay, noGuard)
 
@@ -158,6 +199,17 @@ export const bridgeSendHandler: CommandHandler = async (ctx) => {
   })
 
   clearRead(handle)
+
+  if (result.result.send.accepted) {
+    const sender = await resolveSenderIdentity(ctx.client, worktree)
+    await emitA2ATrace(ctx.client, {
+      fromDisplay: sender.from,
+      targetDisplay,
+      handle,
+      type: 'send',
+      text
+    })
+  }
 
   if (ctx.json) {
     console.log(JSON.stringify(result.result.send))
@@ -187,6 +239,16 @@ export const bridgeMessageHandler: CommandHandler = async (ctx) => {
 
   clearRead(handle)
 
+  if (result.result.send.accepted) {
+    await emitA2ATrace(ctx.client, {
+      fromDisplay: sender.from,
+      targetDisplay,
+      handle,
+      type: 'message',
+      text
+    })
+  }
+
   if (ctx.json) {
     console.log(JSON.stringify(result.result.send))
   } else if (!result.result.send.accepted) {
@@ -204,7 +266,7 @@ export const bridgeKeysHandler: CommandHandler = async (ctx) => {
     )
   }
   const noGuard = ctx.flags.get('no-read-guard') === true || ctx.flags.get('force') === true
-  const { handle, targetDisplay } = await resolveTargetAndHandle(target, ctx)
+  const { handle, targetDisplay, worktree } = await resolveTargetAndHandle(target, ctx)
 
   requireRead(handle, targetDisplay, noGuard)
 
@@ -220,6 +282,15 @@ export const bridgeKeysHandler: CommandHandler = async (ctx) => {
   }
 
   clearRead(handle)
+
+  const sender = await resolveSenderIdentity(ctx.client, worktree)
+  await emitA2ATrace(ctx.client, {
+    fromDisplay: sender.from,
+    targetDisplay,
+    handle,
+    type: 'keys',
+    text: keys.join(' ')
+  })
 
   if (ctx.json) {
     console.log(JSON.stringify({ accepted: true, keys }))
@@ -285,6 +356,50 @@ export const bridgeDoctorHandler: CommandHandler = async (ctx) => {
   }
 }
 
+export const bridgeTraceHandler: CommandHandler = async (ctx) => {
+  const target = getOptionalStringFlag(ctx.flags, 'target') || ctx.rawArgs?.[0]
+  const text = getOptionalStringFlag(ctx.flags, 'text') ?? ctx.rawArgs?.slice(1).join(' ') ?? ''
+  const customFrom = getOptionalStringFlag(ctx.flags, 'from')
+  const typeFlag = getOptionalStringFlag(ctx.flags, 'type')
+  const { targetDisplay, worktree } = await resolveTargetAndHandle(target, ctx)
+
+  const sender = customFrom
+    ? { from: customFrom, handle: 'custom', worktreeLabel: 'custom' }
+    : await resolveSenderIdentity(ctx.client, worktree)
+
+  const validTypes = ['send', 'message', 'type', 'keys'] as const
+  const traceType = (validTypes as readonly string[]).includes(typeFlag ?? '')
+    ? (typeFlag as 'send' | 'message' | 'type' | 'keys')
+    : 'send'
+
+  const fromIndex = parseTerminalIndex(sender.from)
+  const toIndex = parseTerminalIndex(targetDisplay)
+
+  const res = await ctx.client.call<{ ok: boolean; id: string }>('terminal.a2aLink', {
+    from: sender.from,
+    to: targetDisplay,
+    fromIndex,
+    toIndex,
+    type: traceType,
+    text: text || undefined,
+    timestamp: Date.now()
+  })
+
+  if (ctx.json) {
+    console.log(
+      JSON.stringify({
+        ok: true,
+        id: res.result?.id,
+        from: sender.from,
+        to: targetDisplay,
+        text: text || undefined
+      })
+    )
+  } else {
+    console.log(`Trace emitted: ${sender.from} -> ${targetDisplay}${text ? ` (${text})` : ''}`)
+  }
+}
+
 export const BRIDGE_HANDLERS: Record<string, CommandHandler> = {
   'bridge list': bridgeListHandler,
   'bridge id': bridgeIdHandler,
@@ -296,5 +411,6 @@ export const BRIDGE_HANDLERS: Record<string, CommandHandler> = {
   'bridge msg': bridgeMessageHandler,
   'bridge keys': bridgeKeysHandler,
   'bridge name': bridgeNameHandler,
+  'bridge trace': bridgeTraceHandler,
   'bridge doctor': bridgeDoctorHandler
 }

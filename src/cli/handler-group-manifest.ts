@@ -35,7 +35,8 @@ export const HANDLER_GROUPS: readonly HandlerGroup[] = [
       'bridge msg',
       'bridge keys',
       'bridge name',
-      'bridge doctor'
+      'bridge doctor',
+      'bridge trace'
     ],
     load: async () => (await import('./handlers/terminal-bridge.js')).BRIDGE_HANDLERS
   },

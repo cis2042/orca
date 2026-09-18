@@ -13,6 +13,8 @@ import { StarNagAgentValueMomentObserver } from '../components/star-nag/StarNagA
 import { StarNagToastHost } from '../components/star-nag/StarNagToastHost'
 import { TelemetryFirstLaunchSurface } from '../components/TelemetryFirstLaunchSurface'
 import { ZoomOverlay } from '../components/ZoomOverlay'
+import { A2AConnectionOverlay } from '../components/a2a/A2AConnectionOverlay'
+import { A2ADispatchHub } from '../components/a2a/A2ADispatchHub'
 import { shouldRenderPetOverlay } from '../components/pet/pet-overlay-visibility'
 import { useAppStore } from '../store'
 import type { UpdateStatus } from '../../../shared/update-status-types'
@@ -307,6 +309,8 @@ export function AppRootSurfaces(props: {
       <OverlayBoundary boundaryId="overlay.zoom" resetKey={activeView}>
         <ZoomOverlay />
       </OverlayBoundary>
+      <A2AConnectionOverlay />
+      <A2ADispatchHub />
       <Suspense fallback={null}>
         {activeModal === 'delete-worktree' ? (
           <ModalBoundary boundaryId="modal.delete-worktree" resetKey>

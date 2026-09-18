@@ -238,4 +238,94 @@ describe('terminal bridge CLI', () => {
       expect.objectContaining({ text: '\x1b', enter: false })
     )
   })
+
+  it('bridge send emits a2a link trace on success', async () => {
+    const handle = 'term_target'
+    const listResult: RuntimeTerminalListResult = {
+      terminals: [fakeTerminal({ handle, index: 5, target: '@5' })],
+      totalCount: 1,
+      truncated: false
+    }
+
+    const call = vi.fn().mockImplementation((method: string) => {
+      if (method === 'terminal.list') {
+        return Promise.resolve({ id: '1', ok: true, result: listResult })
+      }
+      if (method === 'terminal.send') {
+        return Promise.resolve({ id: '2', ok: true, result: { send: { accepted: true } } })
+      }
+      if (method === 'terminal.a2aLink') {
+        return Promise.resolve({ id: '3', ok: true, result: { ok: true, id: 'a2a-1' } })
+      }
+      return Promise.reject(new Error(`unexpected method: ${method}`))
+    })
+
+    process.env.ORCA_TERMINAL_INDEX = '2'
+    process.env.ORCA_TERMINAL_HANDLE = 'term_sender'
+
+    await BRIDGE_HANDLERS['bridge send']({
+      flags: new Map([['no-read-guard', true]]),
+      client: toMockClient(call),
+      cwd: '/workspaces/proj',
+      json: false,
+      rawArgs: ['@5', 'npm test']
+    })
+
+    expect(call).toHaveBeenCalledWith(
+      'terminal.a2aLink',
+      expect.objectContaining({
+        from: '@2',
+        to: '@5',
+        fromIndex: 2,
+        toIndex: 5,
+        type: 'send',
+        text: 'npm test'
+      })
+    )
+  })
+
+  it('bridge trace emits explicit a2a link with custom text and flags', async () => {
+    const handle = 'term_target_8'
+    const listResult: RuntimeTerminalListResult = {
+      terminals: [fakeTerminal({ handle, index: 8, target: '@8' })],
+      totalCount: 1,
+      truncated: false
+    }
+
+    const call = vi.fn().mockImplementation((method: string) => {
+      if (method === 'terminal.list') {
+        return Promise.resolve({ id: '1', ok: true, result: listResult })
+      }
+      if (method === 'terminal.a2aLink') {
+        return Promise.resolve({ id: '2', ok: true, result: { ok: true, id: 'a2a-trace-8' } })
+      }
+      return Promise.reject(new Error(`unexpected method: ${method}`))
+    })
+
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    await BRIDGE_HANDLERS['bridge trace']({
+      flags: new Map([
+        ['from', '@2'],
+        ['type', 'message']
+      ]),
+      client: toMockClient(call),
+      cwd: '/workspaces/proj',
+      json: false,
+      rawArgs: ['@8', 'sync state']
+    })
+
+    expect(call).toHaveBeenCalledWith(
+      'terminal.a2aLink',
+      expect.objectContaining({
+        from: '@2',
+        to: '@8',
+        fromIndex: 2,
+        toIndex: 8,
+        type: 'message',
+        text: 'sync state'
+      })
+    )
+    expect(log).toHaveBeenCalledWith('Trace emitted: @2 -> @8 (sync state)')
+  })
 })

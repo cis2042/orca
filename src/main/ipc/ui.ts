@@ -74,6 +74,15 @@ export function registerUIHandlers(
     return store.recordFeatureInteraction(id)
   })
 
+  ipcMain.handle('terminal:a2a-link', (_event, link) => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed()) {
+        window.webContents.send('terminal:a2a-link', link)
+      }
+    }
+    return { ok: true }
+  })
+
   ipcMain.removeAllListeners('ui:performNativePaste')
   ipcMain.on('ui:performNativePaste', (event, options?: { mode?: unknown }) => {
     if (!isTrustedUIRenderer(event.sender)) {

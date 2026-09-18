@@ -68,6 +68,11 @@ const appId =
   (process.env.ORCA_PRODUCT_NAME
     ? `com.stablyai.${process.env.ORCA_PRODUCT_NAME.toLowerCase()}`
     : 'com.stablyai.orca')
+const macIconPath =
+  process.env.ORCA_ICON_PATH ||
+  (productName.toLowerCase().includes('oagent') && existsSync('resources/build/icon-oagent.icns')
+    ? 'resources/build/icon-oagent.icns'
+    : 'resources/build/icon.icns')
 const featureWallResources = {
   from: 'resources/onboarding/feature-wall',
   to: 'onboarding/feature-wall'
@@ -262,25 +267,7 @@ module.exports = {
     'out/package.json',
     'out/cli/**',
     'out/shared/**',
-    'out/main/agent-hooks/**',
-    'out/main/antigravity/**',
-    'out/main/claude/**',
-    'out/main/claude-accounts/keychain.js',
-    'out/main/codex/**',
-    'out/main/copilot/**',
-    'out/main/cursor/**',
-    'out/main/droid/**',
-    'out/main/gemini/**',
-    'out/main/grok/**',
-    'out/main/hermes/**',
-    'out/main/daemon-entry.js',
-    'out/main/session-scanner-service-entry.js',
-    'out/main/wsl-transcript-fs-process-entry.js',
-    'out/main/session-scanner-opencode-sqlite-worker-entry.js',
-    'out/main/plugin-host-entry.js',
-    'out/main/computer-sidecar.js',
-    'out/main/parcel-watcher-process-entry.js',
-    'out/main/chunks/**',
+    'out/main/**',
     'resources/**',
     'node_modules/ws/**',
     'node_modules/tweetnacl/**',
@@ -475,7 +462,7 @@ module.exports = {
       role: 'Editor',
       rank: 'Alternate'
     })),
-    icon: 'resources/build/icon.icns',
+    icon: macIconPath,
     entitlements: 'resources/build/entitlements.mac.plist',
     entitlementsInherit: 'resources/build/entitlements.mac.plist',
     extendInfo: {

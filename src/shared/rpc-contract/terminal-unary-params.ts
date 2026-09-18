@@ -236,3 +236,17 @@ export const AgentTeamsPrepareLaunch = z.object({
   paneKey: requiredString('Missing pane key'),
   env: z.record(z.string(), z.string()).optional()
 })
+
+export const TerminalA2ALink = z.object({
+  id: OptionalString,
+  from: requiredString('Missing from'),
+  to: requiredString('Missing to'),
+  fromIndex: z.number().int().positive().optional(),
+  toIndex: z.number().int().positive().optional(),
+  fromLabel: OptionalString,
+  toLabel: OptionalString,
+  type: z.enum(['send', 'message', 'type', 'keys']).default('send').optional(),
+  text: OptionalString,
+  timestamp: z.number().optional(),
+  durationMs: z.number().optional()
+})

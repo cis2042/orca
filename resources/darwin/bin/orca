@@ -14,7 +14,9 @@ function app_realpath() {
 
 APP_PATH="$(app_realpath "${BASH_SOURCE[0]}")"
 if [ -z "$APP_PATH" ] || [ ! -d "$APP_PATH" ]; then
-	if [ -d "/Applications/Orcagent.app" ]; then
+	if [ -d "/Applications/Oagent.app" ]; then
+		APP_PATH="/Applications/Oagent.app"
+	elif [ -d "/Applications/Orcagent.app" ]; then
 		APP_PATH="/Applications/Orcagent.app"
 	elif [ -d "/Applications/Orca.app" ]; then
 		APP_PATH="/Applications/Orca.app"
@@ -26,7 +28,9 @@ if [ -z "$APP_PATH" ]; then
 fi
 
 CONTENTS="$APP_PATH/Contents"
-if [ -x "$CONTENTS/MacOS/Orcagent" ]; then
+if [ -x "$CONTENTS/MacOS/Oagent" ]; then
+	ELECTRON="$CONTENTS/MacOS/Oagent"
+elif [ -x "$CONTENTS/MacOS/Orcagent" ]; then
 	ELECTRON="$CONTENTS/MacOS/Orcagent"
 else
 	ELECTRON="$CONTENTS/MacOS/Orca"

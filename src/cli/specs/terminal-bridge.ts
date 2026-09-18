@@ -69,5 +69,12 @@ export const BRIDGE_COMMAND_SPECS: CommandSpec[] = [
     summary: 'Diagnose Orca terminal bridge environment and connectivity',
     usage: 'orca bridge doctor [--json]',
     allowedFlags: [...GLOBAL_FLAGS]
+  },
+  {
+    path: ['bridge', 'trace'],
+    summary: 'Emit an A2A communication trace link between terminals for UI visualization',
+    usage: 'orca bridge trace <target> [text] [--from <sender>] [--type <send|message|type|keys>] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'target', 'text', 'from', 'type'],
+    positionalArgs: ['target', 'text']
   }
 ]
