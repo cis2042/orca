@@ -82,7 +82,7 @@ type TerminalContextMenuProps = {
 }
 
 export default function TerminalContextMenu(props: TerminalContextMenuProps): React.JSX.Element {
-  const { open, onOpenChange, menuPoint, menuOpenedAtRef, tabColor, onSetTabColor } = props
+  const { open, onOpenChange, menuPoint, menuOpenedAtRef, tabColor: _tabColor, onSetTabColor: _onSetTabColor } = props
   return (
     <DropdownMenu
       open={open}

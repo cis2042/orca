@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   RotateCcw,
   Terminal,
@@ -23,7 +23,7 @@ function formatTimeAgo(timestamp: number): string {
   return `${hours} 小時前`
 }
 
-function getTypeBadge(type: A2ALinkType): { label: string; icon: JSX.Element; color: string } {
+function getTypeBadge(type: A2ALinkType): { label: string; icon: React.JSX.Element; color: string } {
   switch (type) {
     case 'send':
       return {
@@ -52,7 +52,7 @@ function getTypeBadge(type: A2ALinkType): { label: string; icon: JSX.Element; co
   }
 }
 
-export function TeamActivityStream(): JSX.Element {
+export function TeamActivityStream(): React.JSX.Element {
   const { recentTraces, activeLinks, replayTrace, clearTraces } = useA2AStore()
   const [filterText, setFilterText] = useState('')
 

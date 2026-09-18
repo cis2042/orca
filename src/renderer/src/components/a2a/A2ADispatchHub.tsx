@@ -1,12 +1,10 @@
-import { useEffect } from 'react'
+import React, { useEffect } from 'react'
 import {
   Network,
   Activity,
   X,
-  Play,
   Bot,
   Radio,
-  Maximize2,
   Sparkles
 } from 'lucide-react'
 import { useA2AStore } from '../../store/a2a-traces-store'
@@ -14,7 +12,7 @@ import { AgentTopologyGraph } from './AgentTopologyGraph'
 import { TeamActivityStream } from './TeamActivityStream'
 import { A2ACommanderBar } from './A2ACommanderBar'
 
-export function A2ADispatchHub(): JSX.Element | null {
+export function A2ADispatchHub(): React.JSX.Element | null {
   const { isHubOpen, setHubOpen, hubTab, setHubTab, recentTraces, activeLinks, addTrace } =
     useA2AStore()
 

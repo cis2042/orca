@@ -99,7 +99,8 @@ export function SortableTabContextMenu({
           style={{ left: point.x, top: point.y }}
         />
       </DropdownMenuTrigger>
-      <DropdownMenuContent className={TAB_CONTEXT_MENU_CONTENT_CLASS} sideOffset={0} align="start">
+      {open ? (
+        <DropdownMenuContent className={TAB_CONTEXT_MENU_CONTENT_CLASS} sideOffset={0} align="start">
         <TerminalTabSplitMenuSection
           unifiedTabId={unifiedTabId}
           groupId={groupId}
@@ -218,7 +219,8 @@ export function SortableTabContextMenu({
             })}
           </div>
         </div>
-      </DropdownMenuContent>
+        </DropdownMenuContent>
+      ) : null}
     </DropdownMenu>
   )
 }

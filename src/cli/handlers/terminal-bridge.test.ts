@@ -328,4 +328,190 @@ describe('terminal bridge CLI', () => {
     )
     expect(log).toHaveBeenCalledWith('Trace emitted: @2 -> @8 (sync state)')
   })
+
+  it('bridge list prints both terminals and browser tabs with @b targets', async () => {
+    const termList: RuntimeTerminalListResult = {
+      terminals: [fakeTerminal({ handle: 'term_1', index: 1, target: '@1' })],
+      totalCount: 1,
+      truncated: false
+    }
+    const browserList = {
+      tabs: [
+        {
+          browserPageId: 'page_123',
+          index: 1,
+          url: 'https://twin3.ai',
+          title: 'twin3 · Personal Agent',
+          active: true
+        }
+      ]
+    }
+
+    const call = vi.fn().mockImplementation((method: string) => {
+      if (method === 'terminal.list') {
+        return Promise.resolve({ ok: true, result: termList })
+      }
+      if (method === 'browser.tabList') {
+        return Promise.resolve({ ok: true, result: browserList })
+      }
+      return Promise.reject(new Error(`unexpected method: ${method}`))
+    })
+
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    await BRIDGE_HANDLERS['bridge list']({
+      flags: new Map(),
+      client: toMockClient(call),
+      cwd: '/workspaces/proj',
+      json: false
+    })
+
+    const output = String(log.mock.calls[0]?.[0] ?? '')
+    expect(output).toContain('@1')
+    expect(output).toContain('Browsers:')
+    expect(output).toContain('@b1')
+    expect(output).toContain('twin3 · Personal Agent')
+    expect(output).toContain('page_123')
+  })
+
+  it('bridge resolve resolves @b1 to browserPageId', async () => {
+    const browserList = {
+      tabs: [
+        {
+          browserPageId: 'page_456',
+          index: 1,
+          url: 'https://example.com',
+          title: 'Example Domain',
+          active: true
+        }
+      ]
+    }
+
+    const call = vi.fn().mockImplementation((method: string) => {
+      if (method === 'browser.tabList') {
+        return Promise.resolve({ ok: true, result: browserList })
+      }
+      return Promise.reject(new Error(`unexpected method: ${method}`))
+    })
+
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    await BRIDGE_HANDLERS['bridge resolve']({
+      flags: new Map(),
+      client: toMockClient(call),
+      cwd: '/workspaces/proj',
+      json: false,
+      rawArgs: ['@b1']
+    })
+
+    expect(log).toHaveBeenCalledWith('page_456')
+  })
+
+  it('bridge read @b1 takes snapshot and arms read guard for bridge send', async () => {
+    const browserList = {
+      tabs: [
+        {
+          browserPageId: 'page_789',
+          index: 1,
+          url: 'https://example.com',
+          title: 'Example',
+          active: true
+        }
+      ]
+    }
+    const snapshotResult = {
+      title: 'Example',
+      url: 'https://example.com',
+      nodes: [{ id: 1, role: 'button', name: 'Submit' }]
+    }
+
+    const call = vi.fn().mockImplementation((method: string) => {
+      if (method === 'browser.tabList') {
+        return Promise.resolve({ ok: true, result: browserList })
+      }
+      if (method === 'browser.snapshot') {
+        return Promise.resolve({ ok: true, result: snapshotResult })
+      }
+      if (method === 'browser.click') {
+        return Promise.resolve({ ok: true, result: { clicked: '#submit-btn' } })
+      }
+      if (method === 'terminal.a2aLink') {
+        return Promise.resolve({ ok: true, result: { ok: true } })
+      }
+      return Promise.reject(new Error(`unexpected method: ${method}`))
+    })
+
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    // 1. Read the browser tab
+    await BRIDGE_HANDLERS['bridge read']({
+      flags: new Map(),
+      client: toMockClient(call),
+      cwd: '/workspaces/proj',
+      json: false,
+      rawArgs: ['@b1']
+    })
+
+    expect(call).toHaveBeenCalledWith('browser.snapshot', { page: 'page_789' })
+
+    // 2. Send command to the browser tab (guarded by previous read)
+    await BRIDGE_HANDLERS['bridge send']({
+      flags: new Map(),
+      client: toMockClient(call),
+      cwd: '/workspaces/proj',
+      json: false,
+      rawArgs: ['@b1', 'click #submit-btn']
+    })
+
+    expect(call).toHaveBeenCalledWith('browser.click', {
+      element: '#submit-btn',
+      page: 'page_789'
+    })
+    expect(log).toHaveBeenCalledWith('[@b1] Clicked #submit-btn')
+  })
+
+  it('bridge message @b1 navigates browser tab to URL', async () => {
+    const browserList = {
+      tabs: [
+        {
+          browserPageId: 'page_999',
+          index: 1,
+          url: 'about:blank',
+          title: 'New Tab',
+          active: true
+        }
+      ]
+    }
+
+    const call = vi.fn().mockImplementation((method: string) => {
+      if (method === 'browser.tabList') {
+        return Promise.resolve({ ok: true, result: browserList })
+      }
+      if (method === 'browser.openUrl') {
+        return Promise.resolve({ ok: true, result: { browserPageId: 'page_999' } })
+      }
+      if (method === 'terminal.a2aLink') {
+        return Promise.resolve({ ok: true, result: { ok: true } })
+      }
+      return Promise.reject(new Error(`unexpected method: ${method}`))
+    })
+
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    await BRIDGE_HANDLERS['bridge message']({
+      flags: new Map([['no-read-guard', true]]),
+      client: toMockClient(call),
+      cwd: '/workspaces/proj',
+      json: false,
+      rawArgs: ['@b1', 'https://twin3.ai']
+    })
+
+    expect(call).toHaveBeenCalledWith(
+      'browser.openUrl',
+      expect.objectContaining({
+        url: 'https://twin3.ai'
+      })
+    )
+    expect(log).toHaveBeenCalledWith('[@b1] Navigated to https://twin3.ai')
+  })
 })

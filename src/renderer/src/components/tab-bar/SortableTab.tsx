@@ -115,7 +115,7 @@ export default function SortableTab({
 
   // Why: determine 1-based terminal index within the worktree for cross-terminal addressing and mentions.
   const terminalIndex = useAppStore((s) => {
-    const tabs = s.tabsByWorktree[tab.worktreeId]
+    const tabs = s.tabsByWorktree?.[tab.worktreeId]
     if (!tabs) {
       return undefined
     }

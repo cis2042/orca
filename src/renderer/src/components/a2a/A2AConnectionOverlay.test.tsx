@@ -51,6 +51,7 @@ describe('A2AConnectionOverlay', () => {
       traceId = trace.id
     })
 
+    expect(traceId).toBeTruthy()
     render(<A2AConnectionOverlay />)
     expect(useA2AStore.getState().activeLinks).toHaveLength(1)
 

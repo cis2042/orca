@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react'
-import { Send, Zap, Users, Sparkles } from 'lucide-react'
+import React, { useState, useMemo } from 'react'
+import { Zap, Users, Sparkles } from 'lucide-react'
 import { useA2AStore } from '../../store/a2a-traces-store'
 import { parseTerminalIndex } from '../../../../shared/terminal-a2a-link'
 
-export function A2ACommanderBar(): JSX.Element {
+export function A2ACommanderBar(): React.JSX.Element {
   const { recentTraces, addTrace } = useA2AStore()
   const [inputText, setInputText] = useState('')
   const [selectedTarget, setSelectedTarget] = useState<string>('@2')

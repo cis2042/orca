@@ -3,7 +3,7 @@
  */
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import SortableTab from './SortableTab'
 import { PRESET_TAB_COLORS } from './tab-colors'
 import type { TerminalTab } from '../../../../shared/terminal-tab-types'
@@ -106,7 +106,16 @@ function renderTab(tabOverrides: Partial<TerminalTab> = {}) {
         onSetTabColor={vi.fn()}
         onTogglePin={vi.fn()}
         onToggleExpand={vi.fn()}
-        dragData={{ type: 'terminal', tabId: tab.id, unifiedTabId: tab.id, groupId: 'group-1' }}
+        dragData={{
+          kind: 'tab',
+          worktreeId: 'wt-1',
+          groupId: 'group-1',
+          unifiedTabId: tab.id,
+          visibleTabId: tab.id,
+          tabType: 'terminal',
+          label: tab.title ?? '',
+          color: tab.color
+        }}
       />
     )
   })

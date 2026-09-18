@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Bot, Play, Terminal, ArrowRight, Zap, MessageSquare, CheckCircle2 } from 'lucide-react'
+import React, { useMemo, useState } from 'react'
+import { Play, Terminal, ArrowRight } from 'lucide-react'
 import { useA2AStore } from '../../store/a2a-traces-store'
 import { useAppStore } from '../../store'
 import { PRESET_TAB_COLORS } from '../tab-bar/tab-colors'
@@ -38,14 +38,13 @@ function getRoleName(index: number, fallbackLabel?: string): string {
   }
 }
 
-export function AgentTopologyGraph(): JSX.Element {
+export function AgentTopologyGraph(): React.JSX.Element {
   const { activeLinks, recentTraces, selectedAgentIndex, setSelectedAgentIndex, replayTrace } =
     useA2AStore()
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null)
 
   const tabsByWorktree = useAppStore((s) => s.tabsByWorktree)
-  const currentWorktreeId = useAppStore((s) => s.currentWorktreeId)
-  const activeWorktreeId = currentWorktreeId || Object.keys(tabsByWorktree)[0] || ''
+  const activeWorktreeId = Object.keys(tabsByWorktree)[0] || ''
   const currentTabs = tabsByWorktree[activeWorktreeId] ?? []
 
   // Discover all distinct agent indexes from recent traces and DOM

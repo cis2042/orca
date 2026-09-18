@@ -12,9 +12,21 @@ import {
 import { parseWslUncPath } from '../shared/wsl-paths'
 import type { RuntimeClient } from './runtime-client'
 import { RuntimeClientError } from './runtime/types'
-import { resolveTerminalTarget } from './terminal-target-selector'
+import {
+  isBrowserTarget,
+  parseBrowserIndex,
+  resolveBrowserTarget,
+  resolveTerminalTarget,
+  type ResolvedBrowserTarget
+} from './terminal-target-selector'
 
-export { resolveTerminalTarget }
+export {
+  isBrowserTarget,
+  parseBrowserIndex,
+  resolveBrowserTarget,
+  resolveTerminalTarget,
+  type ResolvedBrowserTarget
+}
 import { getOptionalStringFlag, getRequiredStringFlag } from './flags'
 
 export type BrowserCliTarget = {
@@ -234,7 +246,12 @@ export async function getBrowserCommandTarget(
   cwd: string,
   client: RuntimeClient
 ): Promise<BrowserCliTarget> {
-  const page = getOptionalStringFlag(flags, 'page')
+  let page = getOptionalStringFlag(flags, 'page') || getOptionalStringFlag(flags, 'target')
+  if (page && isBrowserTarget(page)) {
+    const worktree = await getBrowserWorktreeSelector(flags, cwd, client)
+    const resolved = await resolveBrowserTarget(page, worktree, client)
+    page = resolved.browserPageId
+  }
   if (!page) {
     return {
       worktree: await getBrowserWorktreeSelector(flags, cwd, client)

@@ -1,5 +1,64 @@
-import type { RuntimeTerminalListResult } from '../shared/runtime-types'
+import type { BrowserTabListResult, RuntimeTerminalListResult } from '../shared/runtime-types'
 import { RuntimeClientError, type RuntimeClient } from './runtime-client'
+
+export function isBrowserTarget(target: string): boolean {
+  return /^[@#]?b(?:rowser)?-?(\d+)$/i.test(target.trim())
+}
+
+export function parseBrowserIndex(target: string): number | null {
+  const m = /^[@#]?b(?:rowser)?-?(\d+)$/i.exec(target.trim())
+  return m ? Number.parseInt(m[1], 10) : null
+}
+
+export type ResolvedBrowserTarget = {
+  browserPageId: string
+  index: number
+  url: string
+  title: string
+}
+
+export async function resolveBrowserTarget(
+  target: string,
+  worktree: string | undefined,
+  client: RuntimeClient
+): Promise<ResolvedBrowserTarget> {
+  const targetIdx = parseBrowserIndex(target)
+  if (targetIdx === null) {
+    throw new RuntimeClientError(
+      'invalid_argument',
+      `Target "${target}" is not a valid browser target (e.g. @b1, @b2)`
+    )
+  }
+
+  const listRes = await client.call<BrowserTabListResult>(
+    'browser.tabList',
+    worktree ? { worktree } : undefined
+  )
+  const tabs = listRes.result?.tabs ?? []
+  if (tabs.length === 0) {
+    throw new RuntimeClientError(
+      'selector_not_found',
+      `No browser tabs found in worktree (target "${target}")`
+    )
+  }
+
+  const matching = tabs.find(
+    (t, idx) => t.index === targetIdx || (!t.index && idx + 1 === targetIdx)
+  )
+  if (!matching) {
+    throw new RuntimeClientError(
+      'selector_not_found',
+      `No browser tab found with index ${targetIdx} (target "${target}"). Available: ${tabs.map((_, i) => `@b${i + 1}`).join(', ')}`
+    )
+  }
+
+  return {
+    browserPageId: matching.browserPageId,
+    index: targetIdx,
+    url: matching.url,
+    title: matching.title
+  }
+}
 
 /**
  * Resolves a terminal target which can be a runtime handle, an index like '@1' or '#1',

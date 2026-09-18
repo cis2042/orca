@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useId, useMemo, useState } from 'react'
-import { Radio, X, RotateCcw, Sparkles, Send, MessageSquare, Maximize2 } from 'lucide-react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { Radio, X, RotateCcw, Send, MessageSquare, Maximize2 } from 'lucide-react'
 import { useA2AStore } from '../../store/a2a-traces-store'
 import type { A2ALinkEvent } from '../../../../shared/terminal-a2a-link'
 
@@ -84,7 +84,6 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
 
   const geometries = useMemo<ResolvedLinkGeometry[]>(() => {
     const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1000
-    const windowHeight = typeof window !== 'undefined' ? window.innerHeight : 800
 
     return activeLinks.map((link, idx) => {
       const elFrom = findTerminalElement(link.fromIndex, link.from)
