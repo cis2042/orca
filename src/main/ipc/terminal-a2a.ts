@@ -40,6 +40,13 @@ export function registerTerminalA2AHandlers(options?: {
   if (!ipc) {
     return
   }
+  try {
+    if (typeof ipc.removeHandler === 'function') {
+      ipc.removeHandler(TERMINAL_A2A_LINK_CHANNEL)
+    }
+  } catch {
+    // Ignore when handler was not registered
+  }
   ipc.handle(TERMINAL_A2A_LINK_CHANNEL, async (_event, event: A2ALinkEvent) => {
     let delivered = event.delivered ?? false
     let targetHandle = event.targetHandle
