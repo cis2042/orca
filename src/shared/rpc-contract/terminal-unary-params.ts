@@ -248,5 +248,11 @@ export const TerminalA2ALink = z.object({
   type: z.enum(['send', 'message', 'type', 'keys']).default('send').optional(),
   text: OptionalString,
   timestamp: z.number().optional(),
-  durationMs: z.number().optional()
+  durationMs: z.number().optional(),
+  dispatch: z.boolean().optional(),
+  delivered: z.boolean().optional(),
+  targetHandle: OptionalString,
+  bytesWritten: z.number().optional(),
+  executionState: z.enum(['delivered', 'executing', 'failed', 'simulated']).optional(),
+  error: OptionalString
 })

@@ -12,6 +12,12 @@ export type A2ALinkEvent = {
   text?: string
   timestamp: number
   durationMs?: number
+  dispatch?: boolean
+  delivered?: boolean
+  targetHandle?: string
+  bytesWritten?: number
+  executionState?: 'delivered' | 'executing' | 'failed' | 'simulated'
+  error?: string
 }
 
 /**

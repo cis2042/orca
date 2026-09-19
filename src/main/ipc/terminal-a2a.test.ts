@@ -1,3 +1,4 @@
+import type { BrowserWindow, ipcMain } from 'electron'
 import { describe, expect, it, vi } from 'vitest'
 import {
   broadcastA2ALink,
@@ -13,11 +14,11 @@ describe('terminal-a2a IPC', () => {
     const mockWindow1 = {
       isDestroyed: () => false,
       webContents: { send: sendMock1 }
-    } as any
+    } as unknown as BrowserWindow
     const mockWindow2 = {
       isDestroyed: () => true,
       webContents: { send: sendMock2 }
-    } as any
+    } as unknown as BrowserWindow
 
     const testEvent: A2ALinkEvent = {
       id: 'test-1',
@@ -40,12 +41,12 @@ describe('terminal-a2a IPC', () => {
 
   it('registers ipc handler and invokes broadcast on call', async () => {
     const handleMock = vi.fn()
-    const mockIpc = { handle: handleMock } as any
+    const mockIpc = { handle: handleMock } as unknown as typeof ipcMain
     const sendMock = vi.fn()
     const mockWindow = {
       isDestroyed: () => false,
       webContents: { send: sendMock }
-    } as any
+    } as unknown as BrowserWindow
 
     registerTerminalA2AHandlers({
       ipc: mockIpc,
@@ -67,7 +68,57 @@ describe('terminal-a2a IPC', () => {
     }
 
     const res = await handler({}, testEvent)
-    expect(res).toEqual({ ok: true })
-    expect(sendMock).toHaveBeenCalledWith(TERMINAL_A2A_LINK_CHANNEL, testEvent)
+    expect(res.ok).toBe(true)
+    expect(sendMock).toHaveBeenCalledWith(
+      TERMINAL_A2A_LINK_CHANNEL,
+      expect.objectContaining({ id: 'test-2', from: '@2', to: '@8' })
+    )
+  })
+
+  it('dispatches to terminal PTY when runtime is supplied to IPC handler', async () => {
+    const handleMock = vi.fn()
+    const mockIpc = { handle: handleMock } as unknown as typeof ipcMain
+    const sendMock = vi.fn()
+    const mockWindow = {
+      isDestroyed: () => false,
+      webContents: { send: sendMock }
+    } as unknown as BrowserWindow
+
+    const mockSendTerminal = vi.fn().mockResolvedValue({
+      send: { accepted: true, bytesWritten: 8 }
+    })
+    const mockRuntime = {
+      listTerminals: vi.fn().mockResolvedValue({
+        terminals: [{ handle: 'term-3', index: 3 }]
+      }),
+      sendTerminal: mockSendTerminal
+    }
+
+    registerTerminalA2AHandlers({
+      ipc: mockIpc,
+      getWindows: () => [mockWindow],
+      getRuntime: () => mockRuntime
+    })
+
+    const handler = handleMock.mock.calls[0][1]
+    const testEvent: A2ALinkEvent = {
+      id: 'test-3',
+      from: '@1',
+      to: '@3',
+      fromIndex: 1,
+      toIndex: 3,
+      type: 'send',
+      text: 'git status',
+      timestamp: Date.now()
+    }
+
+    const res = await handler({}, testEvent)
+    expect(res.ok).toBe(true)
+    expect(res.delivered).toBe(true)
+    expect(res.targetHandle).toBe('term-3')
+    expect(mockSendTerminal).toHaveBeenCalledWith(
+      'term-3',
+      expect.objectContaining({ text: 'git status', enter: true })
+    )
   })
 })

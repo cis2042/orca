@@ -8,18 +8,28 @@ describe('TERMINAL_A2A_METHODS', () => {
     const method = TERMINAL_A2A_METHODS.find((m) => m.name === 'terminal.a2aLink')
     expect(method).toBeDefined()
 
-    const handler = (method as any).handler
-    const res = await handler({
-      from: '@2',
-      to: '@5',
-      fromIndex: 2,
-      toIndex: 5,
-      fromLabel: 'worker',
-      toLabel: 'tester',
-      type: 'send',
-      text: 'npm test',
-      timestamp: 123456789
-    })
+    type RpcMethodWithHandler = {
+      handler: (
+        params: unknown,
+        ctx: unknown
+      ) => Promise<{ ok: boolean; id: string; delivered?: boolean; targetHandle?: string }>
+    }
+
+    const handler = (method as unknown as RpcMethodWithHandler).handler
+    const res = await handler(
+      {
+        from: '@2',
+        to: '@5',
+        fromIndex: 2,
+        toIndex: 5,
+        fromLabel: 'worker',
+        toLabel: 'tester',
+        type: 'send',
+        text: 'npm test',
+        timestamp: 123456789
+      },
+      {}
+    )
 
     expect(res.ok).toBe(true)
     expect(res.id).toMatch(/^a2a-/)
@@ -31,6 +41,58 @@ describe('TERMINAL_A2A_METHODS', () => {
         toIndex: 5,
         type: 'send',
         text: 'npm test'
+      })
+    )
+
+    broadcastSpy.mockRestore()
+  })
+
+  it('dispatches to real terminal PTY when runtime has matching target', async () => {
+    type RpcMethodWithHandler = {
+      handler: (
+        params: unknown,
+        ctx: unknown
+      ) => Promise<{ ok: boolean; id: string; delivered?: boolean; targetHandle?: string }>
+    }
+
+    const broadcastSpy = vi.spyOn(terminalA2aIpc, 'broadcastA2ALink').mockImplementation(() => {})
+    const method = TERMINAL_A2A_METHODS.find((m) => m.name === 'terminal.a2aLink')
+    const handler = (method as unknown as RpcMethodWithHandler).handler
+
+    const mockSendTerminal = vi.fn().mockResolvedValue({
+      send: { accepted: true, bytesWritten: 12 }
+    })
+    const mockRuntime = {
+      listTerminals: vi.fn().mockResolvedValue({
+        terminals: [
+          { handle: 'term-1', index: 1, title: 'agent-1' },
+          { handle: 'term-2', index: 2, title: 'agent-2' }
+        ]
+      }),
+      sendTerminal: mockSendTerminal
+    }
+
+    const res = await handler(
+      {
+        from: '@1',
+        to: '@2',
+        fromIndex: 1,
+        toIndex: 2,
+        type: 'send',
+        text: 'echo "hello"',
+        dispatch: true
+      },
+      { runtime: mockRuntime }
+    )
+
+    expect(res.ok).toBe(true)
+    expect(res.delivered).toBe(true)
+    expect(res.targetHandle).toBe('term-2')
+    expect(mockSendTerminal).toHaveBeenCalledWith(
+      'term-2',
+      expect.objectContaining({
+        text: 'echo "hello"',
+        enter: true
       })
     )
 

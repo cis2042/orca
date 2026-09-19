@@ -2,9 +2,20 @@ import React, { useState, useMemo } from 'react'
 import { Zap, Users, Sparkles } from 'lucide-react'
 import { useA2AStore } from '../../store/a2a-traces-store'
 import { parseTerminalIndex } from '../../../../shared/terminal-a2a-link'
+import { toast } from 'sonner'
+
+type SendA2ALinkResult = {
+  ok?: boolean
+  delivered?: boolean
+  targetHandle?: string
+  bytesWritten?: number
+  executionState?: string
+  error?: string
+}
 
 export function A2ACommanderBar(): React.JSX.Element {
-  const { recentTraces, addTrace } = useA2AStore()
+  const recentTraces = useA2AStore((s) => s.recentTraces)
+  const addTrace = useA2AStore((s) => s.addTrace)
   const [inputText, setInputText] = useState('')
   const [selectedTarget, setSelectedTarget] = useState<string>('@2')
 
@@ -16,15 +27,21 @@ export function A2ACommanderBar(): React.JSX.Element {
     if (typeof document !== 'undefined') {
       document.querySelectorAll('[data-terminal-index]').forEach((el) => {
         const raw = el.getAttribute('data-terminal-index')
-        const idx = raw ? Number.parseInt(raw, 10) : NaN
-        if (Number.isFinite(idx) && idx > 0) indexes.add(idx)
+        const idx = raw ? Number.parseInt(raw, 10) : Number.NaN
+        if (Number.isFinite(idx) && idx > 0) {
+          indexes.add(idx)
+        }
       })
     }
 
     // Check traces
     recentTraces.forEach((t) => {
-      if (t.toIndex) indexes.add(t.toIndex)
-      if (t.fromIndex) indexes.add(t.fromIndex)
+      if (t.toIndex) {
+        indexes.add(t.toIndex)
+      }
+      if (t.fromIndex) {
+        indexes.add(t.fromIndex)
+      }
     })
 
     if (indexes.size === 0) {
@@ -39,7 +56,9 @@ export function A2ACommanderBar(): React.JSX.Element {
 
   const handleDispatch = async () => {
     const trimmed = inputText.trim()
-    if (!trimmed) return
+    if (!trimmed) {
+      return
+    }
 
     let target = selectedTarget
     let command = trimmed
@@ -54,6 +73,7 @@ export function A2ACommanderBar(): React.JSX.Element {
     if (target === '@all') {
       // Fan out to all numbered targets
       const numericTargets = candidateTargets.filter((t) => t !== '@all')
+      let deliveredCount = 0
       for (const t of numericTargets) {
         const toIdx = parseTerminalIndex(t)
         const trace = addTrace({
@@ -67,8 +87,20 @@ export function A2ACommanderBar(): React.JSX.Element {
           text: command
         })
         if (typeof window !== 'undefined' && window.api?.ui?.sendA2ALink) {
-          window.api.ui.sendA2ALink(trace).catch(() => {})
+          try {
+            const res = (await window.api.ui.sendA2ALink(trace)) as unknown as SendA2ALinkResult
+            if (res?.delivered) {
+              deliveredCount++
+            }
+          } catch {
+            // best-effort
+          }
         }
+      }
+      if (deliveredCount > 0) {
+        toast.success(`🟢 指令已即時送達 ${deliveredCount} 個終端 PTY 並開始執行`)
+      } else {
+        toast.info(`⚠️ 指令已廣播，但尚未匹配到活躍的 PTY 終端`)
       }
     } else {
       const toIdx = parseTerminalIndex(target)
@@ -83,7 +115,17 @@ export function A2ACommanderBar(): React.JSX.Element {
         text: command
       })
       if (typeof window !== 'undefined' && window.api?.ui?.sendA2ALink) {
-        window.api.ui.sendA2ALink(trace).catch(() => {})
+        try {
+          const res = (await window.api.ui.sendA2ALink(trace)) as unknown as SendA2ALinkResult
+          if (res?.delivered) {
+            toast.success(`🟢 指令已真實送達 ${target} PTY 並執行`)
+          } else if (res?.error) {
+            toast.warning(`⚠️ 送達 ${target} 失敗: ${res.error}`)
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err)
+          toast.error(`A2A 傳送異常: ${msg}`)
+        }
       }
     }
 

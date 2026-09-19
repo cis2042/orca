@@ -1,24 +1,34 @@
 import React, { useEffect } from 'react'
-import {
-  Network,
-  Activity,
-  X,
-  Bot,
-  Radio,
-  Sparkles
-} from 'lucide-react'
+import { Network, Activity, X, Bot, Radio, Sparkles, Zap } from 'lucide-react'
+import { toast } from 'sonner'
 import { useA2AStore } from '../../store/a2a-traces-store'
 import { AgentTopologyGraph } from './AgentTopologyGraph'
 import { TeamActivityStream } from './TeamActivityStream'
 import { A2ACommanderBar } from './A2ACommanderBar'
 
+type SendA2ALinkResult = {
+  ok?: boolean
+  delivered?: boolean
+  targetHandle?: string
+  bytesWritten?: number
+  executionState?: string
+  error?: string
+}
+
 export function A2ADispatchHub(): React.JSX.Element | null {
-  const { isHubOpen, setHubOpen, hubTab, setHubTab, recentTraces, activeLinks, addTrace } =
-    useA2AStore()
+  const isHubOpen = useA2AStore((s) => s.isHubOpen)
+  const setHubOpen = useA2AStore((s) => s.setHubOpen)
+  const hubTab = useA2AStore((s) => s.hubTab)
+  const setHubTab = useA2AStore((s) => s.setHubTab)
+  const recentTraces = useA2AStore((s) => s.recentTraces)
+  const activeLinks = useA2AStore((s) => s.activeLinks)
+  const addTrace = useA2AStore((s) => s.addTrace)
 
   // Close with Escape key
   useEffect(() => {
-    if (!isHubOpen) return
+    if (!isHubOpen) {
+      return
+    }
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setHubOpen(false)
@@ -28,10 +38,41 @@ export function A2ADispatchHub(): React.JSX.Element | null {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isHubOpen, setHubOpen])
 
-  if (!isHubOpen) return null
+  if (!isHubOpen) {
+    return null
+  }
 
-  const handleSimulateFlow = () => {
-    // Demo flow: #1 delegates to #2, #2 delegates to #5, #2 asks #8 for review
+  const handleLiveProbe = async () => {
+    // Probe real terminals: send a lightweight verification command to @2 or @1
+    const trace = addTrace({
+      from: '@1',
+      to: '@2',
+      fromIndex: 1,
+      toIndex: 2,
+      fromLabel: 'Supervisor',
+      toLabel: 'Worker',
+      type: 'send',
+      text: 'echo "[A2A Live Probe OK] connection verified at $(date +%H:%M:%S)"'
+    })
+    if (typeof window !== 'undefined' && window.api?.ui?.sendA2ALink) {
+      try {
+        const res = (await window.api.ui.sendA2ALink(trace)) as unknown as SendA2ALinkResult
+        if (res?.delivered) {
+          toast.success('🟢 A2A 真實通訊探針已寫入 @2 PTY 並執行！')
+        } else if (res?.error) {
+          toast.warning(`⚠️ 探針已發送，但目標未就緒: ${res.error}`)
+        } else {
+          toast.info('ℹ️ 探針信號已廣播')
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err)
+        toast.error(`探針傳送異常: ${msg}`)
+      }
+    }
+  }
+
+  const handleSimulateDemo = () => {
+    // Explicit demo animation for visual UI preview
     const trace1 = addTrace({
       from: '@1',
       to: '@2',
@@ -40,43 +81,12 @@ export function A2ADispatchHub(): React.JSX.Element | null {
       fromLabel: 'Supervisor',
       toLabel: 'Worker',
       type: 'send',
-      text: 'npm run build:features'
+      text: '# [DEMO ONLY] npm run build:features'
     })
     if (typeof window !== 'undefined' && window.api?.ui?.sendA2ALink) {
-      window.api.ui.sendA2ALink(trace1).catch(() => {})
+      window.api.ui.sendA2ALink({ ...trace1, dispatch: false }).catch(() => {})
     }
-
-    setTimeout(() => {
-      const trace2 = addTrace({
-        from: '@2',
-        to: '@5',
-        fromIndex: 2,
-        toIndex: 5,
-        fromLabel: 'Worker',
-        toLabel: 'Tester',
-        type: 'send',
-        text: 'vitest run src/shared/a2a.test.ts'
-      })
-      if (typeof window !== 'undefined' && window.api?.ui?.sendA2ALink) {
-        window.api.ui.sendA2ALink(trace2).catch(() => {})
-      }
-    }, 1200)
-
-    setTimeout(() => {
-      const trace3 = addTrace({
-        from: '@2',
-        to: '@8',
-        fromIndex: 2,
-        toIndex: 8,
-        fromLabel: 'Worker',
-        toLabel: 'Reviewer',
-        type: 'message',
-        text: 'Code ready for review, please check PR #21223'
-      })
-      if (typeof window !== 'undefined' && window.api?.ui?.sendA2ALink) {
-        window.api.ui.sendA2ALink(trace3).catch(() => {})
-      }
-    }, 2400)
+    toast.info('🎬 正在播放多 Agent 拓撲動效示範（不寫入 PTY）')
   }
 
   return (
@@ -85,11 +95,7 @@ export function A2ADispatchHub(): React.JSX.Element | null {
       data-testid="a2a-dispatch-hub-modal"
     >
       {/* Click outside backdrop */}
-      <div
-        className="absolute inset-0"
-        onClick={() => setHubOpen(false)}
-        aria-hidden="true"
-      />
+      <div className="absolute inset-0" onClick={() => setHubOpen(false)} aria-hidden="true" />
 
       {/* Main Glass Dialog */}
       <div className="relative flex flex-col w-full max-w-4xl h-[88vh] max-h-[720px] rounded-2xl border border-zinc-700/80 bg-zinc-950/95 shadow-2xl overflow-hidden text-zinc-100 z-10 ring-1 ring-white/10">
@@ -151,15 +157,26 @@ export function A2ADispatchHub(): React.JSX.Element | null {
               </button>
             </div>
 
-            {/* Quick Demo Simulate */}
+            {/* Real Live Probe */}
             <button
               type="button"
-              onClick={handleSimulateFlow}
-              className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-600/10 px-2.5 py-1 text-xs font-medium text-violet-300 hover:bg-violet-600/20 transition-colors"
-              title="模擬多 Agent 連續派工動效"
+              onClick={handleLiveProbe}
+              className="flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-600/15 px-2.5 py-1 text-xs font-semibold text-emerald-300 hover:bg-emerald-600/25 transition-colors shadow-sm"
+              title="發送真實探針指令到 @2 PTY 驗證雙向通訊"
             >
-              <Sparkles className="size-3 text-violet-400" />
-              <span>模擬協同</span>
+              <Zap className="size-3 text-emerald-400" />
+              <span>真實探針</span>
+            </button>
+
+            {/* Visual Demo Animation */}
+            <button
+              type="button"
+              onClick={handleSimulateDemo}
+              className="flex items-center gap-1.5 rounded-lg border border-zinc-700/60 bg-zinc-800/40 px-2 py-1 text-xs font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
+              title="播放純視覺示範動效（不寫入終端）"
+            >
+              <Sparkles className="size-3 text-zinc-400" />
+              <span>示範</span>
             </button>
 
             {/* Close Button */}
