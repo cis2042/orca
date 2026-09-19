@@ -23,9 +23,10 @@ export const BRIDGE_COMMAND_SPECS: CommandSpec[] = [
   },
   {
     path: ['bridge', 'read'],
-    summary: 'Read recent output from a target terminal and arm the read-guard',
-    usage: 'orca bridge read <target> [lines] [--screen] [--json]',
-    allowedFlags: [...GLOBAL_FLAGS, 'target', 'screen'],
+    summary:
+      'Read recent output from a target terminal with human-readable formatting and optional fast-jev compaction',
+    usage: 'orca bridge read <target> [lines] [--screen] [--compact] [--raw] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'target', 'screen', 'compact', 'raw'],
     positionalArgs: ['target', 'lines']
   },
   {
@@ -73,7 +74,8 @@ export const BRIDGE_COMMAND_SPECS: CommandSpec[] = [
   {
     path: ['bridge', 'trace'],
     summary: 'Emit an A2A communication trace link between terminals for UI visualization',
-    usage: 'orca bridge trace <target> [text] [--from <sender>] [--type <send|message|type|keys>] [--json]',
+    usage:
+      'orca bridge trace <target> [text] [--from <sender>] [--type <send|message|type|keys>] [--json]',
     allowedFlags: [...GLOBAL_FLAGS, 'target', 'text', 'from', 'type'],
     positionalArgs: ['target', 'text']
   }

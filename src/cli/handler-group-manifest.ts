@@ -32,7 +32,6 @@ export const HANDLER_GROUPS: readonly HandlerGroup[] = [
       'bridge type',
       'bridge send',
       'bridge message',
-      'bridge msg',
       'bridge keys',
       'bridge name',
       'bridge doctor',

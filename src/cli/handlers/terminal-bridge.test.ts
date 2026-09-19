@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { RuntimeTerminalListResult, RuntimeTerminalSummary } from '../../shared/runtime-types'
+import type {
+  RuntimeTerminalListResult,
+  RuntimeTerminalRead,
+  RuntimeTerminalSummary
+} from '../../shared/runtime-types'
 import type { RuntimeClient } from '../runtime-client'
 import { BRIDGE_HANDLERS } from './terminal-bridge'
 
@@ -203,6 +207,90 @@ describe('terminal bridge CLI', () => {
         rawArgs: ['@1', 'Second message']
       })
     ).rejects.toThrow(/must read the terminal before interacting/)
+  })
+
+  it('bridge read formats code blocks for human reading, supports --raw and --compact', async () => {
+    const handle = 'term_human_test'
+    const listResult: RuntimeTerminalListResult = {
+      terminals: [fakeTerminal({ handle, index: 1, target: '@1' })],
+      totalCount: 1,
+      truncated: false
+    }
+    const readResult: RuntimeTerminalRead = {
+      handle,
+      status: 'running',
+      tail: ['\x1b[32mBuild finished\x1b[0m', '```typescript', 'export const value = 42', '```'],
+      truncated: false,
+      nextCursor: null
+    }
+
+    const call = vi.fn().mockImplementation((method: string) => {
+      if (method === 'terminal.list') {
+        return Promise.resolve({ id: '1', ok: true, result: listResult })
+      }
+      if (method === 'terminal.read') {
+        return Promise.resolve({ id: '2', ok: true, result: { terminal: readResult } })
+      }
+      return Promise.reject(new Error(`unexpected method: ${method}`))
+    })
+
+    const stdoutWrite = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
+
+    // 1. Default read formats code and cleans ANSI
+    await BRIDGE_HANDLERS['bridge read']({
+      flags: new Map(),
+      client: toMockClient(call),
+      cwd: '/workspaces/proj',
+      json: false,
+      rawArgs: ['@1']
+    })
+    expect(stdoutWrite).toHaveBeenLastCalledWith(expect.stringContaining('╭── [typescript]'))
+    expect(stdoutWrite).toHaveBeenLastCalledWith(expect.not.stringContaining('\x1b[32m'))
+
+    // 2. --raw read preserves ANSI and original text
+    await BRIDGE_HANDLERS['bridge read']({
+      flags: new Map([['raw', true]]),
+      client: toMockClient(call),
+      cwd: '/workspaces/proj',
+      json: false,
+      rawArgs: ['@1']
+    })
+    expect(stdoutWrite).toHaveBeenLastCalledWith(
+      expect.stringContaining('\x1b[32mBuild finished\x1b[0m')
+    )
+
+    // 3. --compact read applies compaction
+    const longReadResult: RuntimeTerminalRead = {
+      handle,
+      status: 'running',
+      tail: [
+        '> Run test suite',
+        '$ pnpm test',
+        'test output line '.repeat(100),
+        '> Summary',
+        'Completed'
+      ],
+      truncated: false,
+      nextCursor: null
+    }
+    call.mockImplementation((method: string) => {
+      if (method === 'terminal.list') {
+        return Promise.resolve({ id: '1', ok: true, result: listResult })
+      }
+      if (method === 'terminal.read') {
+        return Promise.resolve({ id: '2', ok: true, result: { terminal: longReadResult } })
+      }
+      return Promise.reject(new Error(`unexpected method: ${method}`))
+    })
+
+    await BRIDGE_HANDLERS['bridge read']({
+      flags: new Map([['compact', true]]),
+      client: toMockClient(call),
+      cwd: '/workspaces/proj',
+      json: false,
+      rawArgs: ['@1']
+    })
+    expect(stdoutWrite).toHaveBeenLastCalledWith(expect.stringContaining('[fast-jev-compaction'))
   })
 
   it('bridge keys translates Enter and Escape and clears read guard', async () => {
