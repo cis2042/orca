@@ -34,6 +34,7 @@ function getItemIcon(kind: BacklogItem['kind']): React.JSX.Element {
       return <CircleDot className="size-4 text-muted-foreground shrink-0" />
     case 'branch':
       return <GitBranch className="size-4 text-primary shrink-0" />
+    case 'task':
     default:
       return <CheckSquare className="size-4 text-primary shrink-0" />
   }
@@ -59,6 +60,7 @@ function getKindBadge(kind: BacklogItem['kind']): React.JSX.Element {
           Branch
         </span>
       )
+    case 'task':
     default:
       return (
         <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-accent-foreground border border-border">
