@@ -17,6 +17,7 @@ export async function requestTerminalTabCloseFromRenderer(
   if (mainWindow.isDestroyed() || mainWindow.webContents.isDestroyed()) {
     throw new Error('renderer_unavailable')
   }
+  const webContents = mainWindow.webContents
   const requestId = randomUUID()
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
@@ -26,7 +27,11 @@ export async function requestTerminalTabCloseFromRenderer(
     const onResponse = (event: Electron.IpcMainEvent, response: TerminalTabCloseResponse): void => {
       // Why: request IDs are visible to renderer code; only the selected main
       // window may commit or reject its lifecycle transaction.
-      if (event.sender !== mainWindow.webContents || response.requestId !== requestId) {
+      if (
+        mainWindow.isDestroyed() ||
+        event.sender !== webContents ||
+        response.requestId !== requestId
+      ) {
         return
       }
       clearTimeout(timeout)
@@ -39,6 +44,6 @@ export async function requestTerminalTabCloseFromRenderer(
     }
     ipcMain.on('ui:terminalTabCloseResponse', onResponse)
     const request: TerminalTabCloseRequest = { requestId, tabId, ...options }
-    mainWindow.webContents.send('ui:terminalTabCloseRequest', request)
+    webContents.send('ui:terminalTabCloseRequest', request)
   })
 }

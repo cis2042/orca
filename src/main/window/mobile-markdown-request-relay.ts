@@ -24,6 +24,7 @@ export async function requestMobileMarkdownFromRenderer(
   if (mainWindow.isDestroyed()) {
     throw new Error('renderer_unavailable')
   }
+  const webContents = mainWindow.webContents
   const id = randomUUID()
   return await new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
@@ -34,7 +35,7 @@ export async function requestMobileMarkdownFromRenderer(
       event: Electron.IpcMainEvent,
       response: RuntimeMobileMarkdownResponse
     ): void => {
-      if (event.sender !== mainWindow.webContents) {
+      if (mainWindow.isDestroyed() || event.sender !== webContents) {
         return
       }
       if (response.id !== id) {
@@ -49,6 +50,6 @@ export async function requestMobileMarkdownFromRenderer(
       }
     }
     ipcMain.on('ui:mobileMarkdownResponse', onResponse)
-    mainWindow.webContents.send('ui:mobileMarkdownRequest', { id, ...request })
+    webContents.send('ui:mobileMarkdownRequest', { id, ...request })
   })
 }
