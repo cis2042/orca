@@ -259,6 +259,34 @@ describe('A2AConnectionOverlay', () => {
     document.body.removeChild(pane1)
   })
 
+  it('renders loopback arc and beam for single-terminal self-link', () => {
+    const [tab1, pane1] = appendTerminalFixture(
+      1,
+      'tab-1',
+      { left: 50, top: 20, width: 80, height: 30 },
+      { left: 50, top: 80, width: 260, height: 160 }
+    )
+
+    act(() => {
+      useA2AStore.getState().addTrace({
+        from: '@1',
+        to: '@1',
+        type: 'send',
+        text: 'echo A2A Beam Test'
+      })
+    })
+
+    const { container } = render(<A2AConnectionOverlay />)
+    const beam = container.querySelector('.a2a-link-beam')
+    expect(beam).not.toBeNull()
+
+    const beamFlow = container.querySelector('.a2a-link-beam .a2a-link-beam-flow')
+    expect(beamFlow?.getAttribute('d')).toContain('M 150 150 Q 180 40 210 150')
+
+    document.body.removeChild(tab1)
+    document.body.removeChild(pane1)
+  })
+
   it('allows dismissing an active trace via close button', () => {
     const [tab2, pane2] = appendTerminalFixture(
       2,
