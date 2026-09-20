@@ -1,9 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { X, Send, MessageSquare } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useA2AStore } from '../../store/a2a-traces-store'
 import type { A2ALinkEvent } from '../../../../shared/terminal-a2a-link'
 import { A2AConnectionHud } from './A2AConnectionHud'
+import {
+  A2AConnectionEffects,
+  getA2AConnectionMotif,
+  type A2AConnectionMotif
+} from './A2AConnectionEffects'
 
 type Point = { x: number; y: number }
 
@@ -15,49 +20,73 @@ type ResolvedLinkGeometry = {
   midY: number
   pathD: string
   isFallback: boolean
+  motif: A2AConnectionMotif
+}
+
+function hasUsableTerminalBounds(el: HTMLElement): boolean {
+  const rect = el.getBoundingClientRect()
+  return (
+    rect.width > 0 &&
+    rect.height > 0 &&
+    el.getAttribute('aria-hidden') !== 'true' &&
+    el.closest('[aria-hidden="true"]') === null
+  )
 }
 
 function resolvePointFromElement(el: Element | null): Point | null {
-  if (!el) {
+  if (!(el instanceof HTMLElement) || !hasUsableTerminalBounds(el)) {
     return null
   }
   const rect = el.getBoundingClientRect()
-  if (rect.width === 0 && rect.height === 0) {
-    return null
-  }
   return {
     x: rect.left + rect.width / 2,
-    y: rect.bottom > 50 && rect.top < 50 ? rect.bottom - 2 : rect.top + rect.height / 2
+    y: rect.top + rect.height / 2
   }
+}
+
+function findTerminalPane(tabId: string): HTMLElement | null {
+  const panes = Array.from(document.querySelectorAll<HTMLElement>('[data-terminal-tab-id]')).filter(
+    (el) => el.dataset.terminalTabId === tabId && hasUsableTerminalBounds(el)
+  )
+
+  return panes.reduce<HTMLElement | null>((largest, pane) => {
+    if (!largest) {
+      return pane
+    }
+    const current = pane.getBoundingClientRect()
+    const previous = largest.getBoundingClientRect()
+    return current.width * current.height > previous.width * previous.height ? pane : largest
+  }, null)
 }
 
 function findTerminalElement(targetIndex?: number, targetName?: string): Element | null {
   if (typeof document === 'undefined') {
     return null
   }
+
   try {
-    if (targetIndex !== undefined) {
-      const escapedIndex =
-        typeof CSS !== 'undefined' && CSS.escape
-          ? CSS.escape(String(targetIndex))
-          : String(targetIndex)
-      const el = document.querySelector(`[data-terminal-index="${escapedIndex}"]`)
-      if (el) {
-        return el
+    const cleanTargetName = targetName?.replace(/^[@#]/, '')
+    const tabRoots = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-tab-id][data-terminal-index]')
+    )
+    const matchesTarget = (el: HTMLElement): boolean => {
+      if (targetIndex !== undefined && el.dataset.terminalIndex === String(targetIndex)) {
+        return true
       }
+      if (!cleanTargetName) {
+        return false
+      }
+      const title = el.dataset.tabTitle?.trim().replace(/^[@#]/, '')
+      return title === cleanTargetName || title?.toLowerCase() === cleanTargetName.toLowerCase()
     }
-    if (targetName) {
-      const clean = targetName.replace(/^[@#]/, '')
-      const escapedClean = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(clean) : clean
-      const byIndex = document.querySelector(`[data-terminal-index="${escapedClean}"]`)
-      if (byIndex) {
-        return byIndex
+
+    for (const tabRoot of tabRoots) {
+      if (!matchesTarget(tabRoot) || !tabRoot.dataset.tabId) {
+        continue
       }
-      const escapedTitle =
-        typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(targetName) : targetName
-      const byTitle = document.querySelector(`[title*="${escapedTitle}"]`)
-      if (byTitle) {
-        return byTitle
+      const pane = findTerminalPane(tabRoot.dataset.tabId)
+      if (pane) {
+        return pane
       }
     }
   } catch {
@@ -76,74 +105,89 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
   const setHubOpen = useA2AStore((s) => s.setHubOpen)
 
   const [hudOpen, setHudOpen] = useState(false)
-  const [, setTick] = useState(0)
+  const [, setLayoutRevision] = useState(0)
 
-  // Re-measure positions on window resize or periodic animation frame
+  // Re-measure after pane movement, scrolling, and tab/workspace layout changes.
   useEffect(() => {
     if (activeLinks.length === 0) {
       return
     }
-    const handleResize = (): void => setTick((t) => t + 1)
-    window.addEventListener('resize', handleResize)
-    const interval = setInterval(() => setTick((t) => t + 1), 300)
+    const invalidateLayout = (): void => setLayoutRevision((revision) => revision + 1)
+    window.addEventListener('resize', invalidateLayout)
+    window.addEventListener('scroll', invalidateLayout, true)
+    const interval = window.setInterval(invalidateLayout, 300)
     return () => {
-      window.removeEventListener('resize', handleResize)
-      clearInterval(interval)
+      window.removeEventListener('resize', invalidateLayout)
+      window.removeEventListener('scroll', invalidateLayout, true)
+      window.clearInterval(interval)
     }
   }, [activeLinks.length])
 
-  const geometries = useMemo<ResolvedLinkGeometry[]>(() => {
-    return activeLinks.map((link, idx) => {
-      const elFrom = findTerminalElement(link.fromIndex, link.from)
-      const elTo = findTerminalElement(link.toIndex, link.to)
+  const geometries: ResolvedLinkGeometry[] = activeLinks.map((link) => {
+    const elFrom = findTerminalElement(link.fromIndex, link.from)
+    const elTo = findTerminalElement(link.toIndex, link.to)
 
-      const p1 = resolvePointFromElement(elFrom)
-      const p2 = resolvePointFromElement(elTo)
+    const p1 = resolvePointFromElement(elFrom)
+    const p2 = resolvePointFromElement(elTo)
 
-      // Zero Phantom Beam: never draw bezier arcs to arbitrary empty space
-      if (!p1 || !p2) {
-        return {
-          link,
-          p1,
-          p2,
-          midX: p1?.x ?? p2?.x ?? 0,
-          midY: p1 ? p1.y + 28 : p2 ? p2.y + 28 : 0,
-          pathD: '',
-          isFallback: true
-        }
-      }
-
-      // Compute curve path between two real terminals
-      const dx = Math.abs(p2.x - p1.x)
-      const dy = Math.abs(p2.y - p1.y)
-
-      let pathD = ''
-      let midX = (p1.x + p2.x) / 2
-      let midY = (p1.y + p2.y) / 2
-
-      if (dy < 30) {
-        // Both endpoints are along a horizontal line (e.g. top TabBar)
-        // Draw a pleasant hanging arc dipping into the workspace
-        const arcDepth = Math.min(140, Math.max(50, dx * 0.22)) + (idx % 4) * 16
-        midY = Math.max(p1.y, p2.y) + arcDepth
-        pathD = `M ${p1.x} ${p1.y} Q ${midX} ${midY} ${p2.x} ${p2.y}`
-      } else {
-        // Multi-level curve (e.g. tab to split pane or pane to pane)
-        const controlXOffset = (p2.x - p1.x) * 0.5
-        pathD = `M ${p1.x} ${p1.y} C ${p1.x + controlXOffset} ${p1.y}, ${p2.x - controlXOffset} ${p2.y}, ${p2.x} ${p2.y}`
-      }
-
+    // Zero Phantom Beam: never draw bezier arcs to arbitrary empty space
+    if (!p1 || !p2) {
       return {
         link,
         p1,
         p2,
-        midX,
-        midY,
-        pathD,
-        isFallback: false
+        midX: p1?.x ?? p2?.x ?? 0,
+        midY: p1 ? p1.y + 28 : p2 ? p2.y + 28 : 0,
+        pathD: '',
+        isFallback: true,
+        motif: getA2AConnectionMotif(link)
       }
-    })
-  }, [activeLinks])
+    }
+
+    // A self-link is not a source-to-target connection and should not become a loop.
+    if (p1.x === p2.x && p1.y === p2.y) {
+      return {
+        link,
+        p1,
+        p2,
+        midX: p1.x,
+        midY: p1.y,
+        pathD: '',
+        isFallback: true,
+        motif: getA2AConnectionMotif(link)
+      }
+    }
+
+    // Compute curve path between two real terminals
+    const dx = Math.abs(p2.x - p1.x)
+    const dy = Math.abs(p2.y - p1.y)
+
+    let pathD = ''
+    let midX = (p1.x + p2.x) / 2
+    let midY = (p1.y + p2.y) / 2
+
+    if (dy < 30) {
+      // Keep same-row pane connections readable without depending on trace order.
+      const arcDepth = Math.min(120, Math.max(48, dx * 0.18))
+      midY = Math.max(p1.y, p2.y) + arcDepth
+      pathD = `M ${p1.x} ${p1.y} Q ${midX} ${midY} ${p2.x} ${p2.y}`
+    } else {
+      // Multi-level curve (e.g. tab to split pane or pane to pane)
+      const controlXOffset = (p2.x - p1.x) * 0.5
+      pathD = `M ${p1.x} ${p1.y} C ${p1.x + controlXOffset} ${p1.y}, ${p2.x - controlXOffset} ${p2.y}, ${p2.x} ${p2.y}`
+    }
+
+    return {
+      link,
+      p1,
+      p2,
+      midX,
+      midY,
+      pathD,
+      isFallback: false,
+      motif: getA2AConnectionMotif(link)
+    }
+  })
 
   const handleTestTrigger = useCallback(
     (from: string, to: string, text: string) => {
@@ -169,13 +213,15 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
       {geometries.length > 0 && (
         <svg
           className="absolute inset-0 size-full pointer-events-none"
-          style={{ filter: 'drop-shadow(0 0 10px rgba(139, 92, 246, 0.3))' }}
+          style={{
+            filter: 'drop-shadow(0 0 10px color-mix(in srgb, var(--a2a-flow) 28%, transparent))'
+          }}
         >
           <defs>
             <linearGradient id="a2a-beam-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#c084fc" stopOpacity="0.95" />
-              <stop offset="40%" stopColor="#38bdf8" stopOpacity="1" />
-              <stop offset="100%" stopColor="#34d399" stopOpacity="0.95" />
+              <stop offset="0%" stopColor="var(--a2a-source)" stopOpacity="0.95" />
+              <stop offset="40%" stopColor="var(--a2a-flow)" stopOpacity="1" />
+              <stop offset="100%" stopColor="var(--a2a-target)" stopOpacity="0.95" />
             </linearGradient>
 
             <filter id="a2a-glow" x="-20%" y="-20%" width="140%" height="140%">
@@ -191,11 +237,11 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
               viewBox="0 0 10 10"
               refX="8"
               refY="5"
-              markerWidth="6"
-              markerHeight="6"
+              markerWidth="8"
+              markerHeight="8"
               orient="auto-start-reverse"
             >
-              <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#34d399" />
+              <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="var(--a2a-target)" />
             </marker>
           </defs>
 
@@ -203,15 +249,21 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
             .filter((g): g is ResolvedLinkGeometry & { p1: Point; p2: Point } =>
               Boolean(g.pathD && g.p1 && g.p2)
             )
-            .map(({ link, p1, p2, pathD }) => (
-              <g key={link.id} className="a2a-link-beam">
+            .map(({ link, p1, p2, pathD, motif }) => (
+              <g
+                key={link.id}
+                className="a2a-link-beam"
+                role="group"
+                aria-label={`#${link.fromIndex ?? link.from} → #${link.toIndex ?? link.to}`}
+              >
                 {/* Outer soft glow line */}
                 <path
                   d={pathD}
                   fill="none"
                   stroke="url(#a2a-beam-gradient)"
-                  strokeWidth="7"
-                  strokeOpacity="0.35"
+                  strokeWidth="14"
+                  strokeOpacity="0.28"
+                  strokeLinecap="round"
                   filter="url(#a2a-glow)"
                 />
 
@@ -219,17 +271,35 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
                 <path
                   d={pathD}
                   fill="none"
+                  className="a2a-link-beam-flow"
                   stroke="url(#a2a-beam-gradient)"
-                  strokeWidth="2.5"
-                  strokeDasharray="8 6"
+                  strokeWidth="4.5"
+                  strokeDasharray="18 8"
                   markerEnd="url(#a2a-arrow-head)"
-                  style={{
-                    animation: 'a2a-dash-flow 1.5s linear infinite'
-                  }}
                 />
 
+                <path
+                  d={pathD}
+                  fill="none"
+                  className="a2a-link-beam-flow-core"
+                  stroke="var(--a2a-flow-soft)"
+                  strokeWidth="1.4"
+                  strokeDasharray="3 11"
+                  markerEnd="url(#a2a-arrow-head)"
+                />
+
+                <A2AConnectionEffects pathD={pathD} motif={motif} />
+
                 {/* Origin (#from) glowing ring and radar ping */}
-                <circle cx={p1.x} cy={p1.y} r="14" fill="none" stroke="#c084fc" strokeWidth="1.5">
+                <circle
+                  className="a2a-link-beam-pulse"
+                  cx={p1.x}
+                  cy={p1.y}
+                  r="14"
+                  fill="none"
+                  stroke="var(--a2a-source)"
+                  strokeWidth="1.5"
+                >
                   <animate attributeName="r" from="4" to="20" dur="1.8s" repeatCount="indefinite" />
                   <animate
                     attributeName="opacity"
@@ -243,13 +313,21 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
                   cx={p1.x}
                   cy={p1.y}
                   r="5"
-                  fill="#a855f7"
-                  stroke="#ffffff"
+                  fill="var(--a2a-source)"
+                  stroke="var(--foreground)"
                   strokeWidth="1.5"
                 />
 
                 {/* Target (#to) receiving pulse rings */}
-                <circle cx={p2.x} cy={p2.y} r="16" fill="none" stroke="#34d399" strokeWidth="1.5">
+                <circle
+                  className="a2a-link-beam-pulse"
+                  cx={p2.x}
+                  cy={p2.y}
+                  r="16"
+                  fill="none"
+                  stroke="var(--a2a-target)"
+                  strokeWidth="1.5"
+                >
                   <animate attributeName="r" from="6" to="24" dur="1.8s" repeatCount="indefinite" />
                   <animate
                     attributeName="opacity"
@@ -263,13 +341,19 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
                   cx={p2.x}
                   cy={p2.y}
                   r="6"
-                  fill="#10b981"
-                  stroke="#ffffff"
+                  fill="var(--a2a-target)"
+                  stroke="var(--foreground)"
                   strokeWidth="1.5"
                 />
 
                 {/* Traveling light particle / energy packet */}
-                <circle r="4.5" fill="#ffffff" stroke="#38bdf8" strokeWidth="2">
+                <circle
+                  className="a2a-link-beam-pulse"
+                  r="4.5"
+                  fill="var(--foreground)"
+                  stroke="var(--a2a-flow)"
+                  strokeWidth="2"
+                >
                   <animateMotion path={pathD} dur="1.4s" repeatCount="indefinite" />
                 </circle>
               </g>
@@ -290,26 +374,28 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
               transform: 'translate(-50%, -50%)'
             }}
             className={cn(
-              'pointer-events-auto flex items-center gap-2 rounded-full border bg-zinc-950/90 px-3 py-1 text-xs font-mono text-zinc-100 shadow-xl backdrop-blur-md transition-all hover:scale-105',
-              isFallback ? 'border-amber-500/40 text-amber-200' : 'border-violet-500/40'
+              'pointer-events-auto flex items-center gap-2 rounded-full border bg-a2a-canvas/90 px-3 py-1 text-xs font-mono text-foreground shadow-xl backdrop-blur-md transition-all hover:scale-105',
+              isFallback ? 'border-a2a-warning/40 text-a2a-warning' : 'border-a2a-flow/40'
             )}
           >
             {/* Source badge */}
-            <span className="flex items-center gap-1 rounded bg-violet-500/20 px-1.5 py-0.5 font-bold text-violet-300 border border-violet-500/30">
+            <span className="flex items-center gap-1 rounded border border-a2a-source/30 bg-a2a-source/15 px-1.5 py-0.5 font-bold text-a2a-source">
+              <span className="text-[9px] font-normal text-a2a-source/70">SRC</span>
               {link.fromIndex !== undefined ? `#${link.fromIndex}` : link.from}
             </span>
 
-            <span className="text-zinc-400">➔</span>
+            <span className="text-a2a-flow">→</span>
 
             {/* Target badge */}
             <span
               className={cn(
                 'flex items-center gap-1 rounded px-1.5 py-0.5 font-bold border',
                 isFallback
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  ? 'border-a2a-warning/30 bg-a2a-warning/20 text-a2a-warning'
+                  : 'border-a2a-target/30 bg-a2a-target/10 text-a2a-target'
               )}
             >
+              <span className="text-[9px] font-normal text-a2a-target/70">DST</span>
               {link.toIndex !== undefined ? `#${link.toIndex}` : link.to}
               {isFallback && (
                 <span className="text-[9px] font-sans font-normal opacity-75">(bg)</span>
@@ -317,12 +403,12 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
             </span>
 
             {/* Action icon and text preview */}
-            <div className="flex items-center gap-1.5 text-zinc-300 pl-1 border-l border-zinc-700/60 max-w-[220px] truncate">
-              {link.type === 'send' && <Send className="size-3 text-cyan-400 shrink-0" />}
+            <div className="flex max-w-[220px] items-center gap-1.5 truncate border-l border-border/60 pl-1 text-foreground/80">
+              {link.type === 'send' && <Send className="size-3 shrink-0 text-a2a-flow" />}
               {link.type === 'message' && (
-                <MessageSquare className="size-3 text-emerald-400 shrink-0" />
+                <MessageSquare className="size-3 shrink-0 text-a2a-target" />
               )}
-              {link.type === 'type' && <span className="text-[10px] text-amber-400">⌨</span>}
+              {link.type === 'type' && <span className="text-[10px] text-a2a-warning">⌨</span>}
               <span className="truncate text-[11px]">{link.text || link.type}</span>
             </div>
 
@@ -330,7 +416,7 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
             <button
               type="button"
               onClick={() => removeActiveLink(link.id)}
-              className="ml-1 rounded-full p-0.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+              className="ml-1 rounded-full p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
               aria-label="Dismiss trace"
             >
               <X className="size-3" />
@@ -350,17 +436,6 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
         replayTrace={replayTrace}
         onTestTrigger={handleTestTrigger}
       />
-
-      <style>{`
-        @keyframes a2a-dash-flow {
-          from {
-            stroke-dashoffset: 28;
-          }
-          to {
-            stroke-dashoffset: 0;
-          }
-        }
-      `}</style>
     </div>
   )
 }

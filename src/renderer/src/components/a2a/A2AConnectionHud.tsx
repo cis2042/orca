@@ -1,6 +1,8 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { Radio, X, RotateCcw, Maximize2 } from 'lucide-react'
 import type { A2ALinkEvent } from '../../../../shared/terminal-a2a-link'
+import { A2ATelemetrySummary } from './A2ATelemetrySummary'
+import { summarizeA2AConnections } from './a2a-telemetry'
 
 type A2AConnectionHudProps = {
   hudOpen: boolean
@@ -25,16 +27,21 @@ export function A2AConnectionHud({
   replayTrace,
   onTestTrigger
 }: A2AConnectionHudProps): React.JSX.Element | null {
+  const telemetry = useMemo(
+    () => summarizeA2AConnections(recentTraces, activeLinks),
+    [recentTraces, activeLinks]
+  )
+
   return (
     <div className="pointer-events-auto absolute bottom-4 right-4 z-50 flex flex-col items-end gap-2">
       {hudOpen && (
-        <div className="flex w-80 flex-col rounded-xl border border-zinc-800 bg-zinc-950/95 p-3.5 text-zinc-200 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-150">
-          <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80">
+        <div className="flex w-80 flex-col rounded-xl border border-a2a-flow/25 bg-a2a-canvas/95 p-3.5 text-foreground/90 shadow-floating backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-150">
+          <div className="flex items-center justify-between border-b border-a2a-flow/15 pb-2">
             <div className="flex items-center gap-2">
-              <Radio className="size-4 text-violet-400 animate-pulse" />
-              <span className="text-xs font-semibold text-zinc-100">A2A 通訊軌跡 (Trace)</span>
+              <Radio className="size-4 text-a2a-flow animate-pulse" />
+              <span className="text-xs font-semibold text-foreground">A2A 通訊軌跡 (Trace)</span>
               {activeLinks.length > 0 && (
-                <span className="rounded-full bg-violet-500/20 px-1.5 py-0.2 text-[10px] font-mono font-medium text-violet-300 border border-violet-500/30">
+                <span className="rounded-full border border-a2a-target/30 bg-a2a-target/10 px-1.5 py-0.2 text-[10px] font-mono font-medium text-a2a-target">
                   {activeLinks.length} active
                 </span>
               )}
@@ -43,7 +50,7 @@ export function A2AConnectionHud({
               <button
                 type="button"
                 onClick={() => setHubOpen(true)}
-                className="flex items-center gap-1 rounded bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/40 px-1.5 py-0.5 text-[10px] text-violet-300 transition-colors"
+                className="flex items-center gap-1 rounded border border-a2a-source/30 bg-a2a-source/10 px-1.5 py-0.5 text-[10px] text-a2a-source transition-colors hover:bg-a2a-source/20"
                 title="展開完整 A2A 調度中樞 (Grokbot Hub)"
               >
                 <Maximize2 className="size-2.5" />
@@ -53,7 +60,7 @@ export function A2AConnectionHud({
                 <button
                   type="button"
                   onClick={clearTraces}
-                  className="rounded px-1.5 py-0.5 text-[10px] text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                  className="rounded px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-accent hover:text-foreground"
                 >
                   Clear
                 </button>
@@ -61,7 +68,7 @@ export function A2AConnectionHud({
               <button
                 type="button"
                 onClick={() => setHudOpen(false)}
-                className="rounded p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
                 aria-label="Close HUD"
               >
                 <X className="size-3.5" />
@@ -69,20 +76,22 @@ export function A2AConnectionHud({
             </div>
           </div>
 
+          <A2ATelemetrySummary telemetry={telemetry} compact />
+
           {/* Quick Demo Triggers */}
           <div className="my-2 flex items-center gap-1.5">
-            <span className="text-[10px] text-zinc-400">測試連線:</span>
+            <span className="text-[10px] text-muted-foreground">測試連線:</span>
             <button
               type="button"
               onClick={() => onTestTrigger('@2', '@5', 'npm test')}
-              className="flex items-center gap-1 rounded bg-violet-500/15 hover:bg-violet-500/25 px-2 py-0.5 text-[10px] font-mono text-violet-300 border border-violet-500/30 transition-colors"
+              className="flex items-center gap-1 rounded border border-a2a-source/30 bg-a2a-source/10 px-2 py-0.5 text-[10px] font-mono text-a2a-source transition-colors hover:bg-a2a-source/20"
             >
               #2 ➔ #5
             </button>
             <button
               type="button"
               onClick={() => onTestTrigger('@2', '@8', 'review ready')}
-              className="flex items-center gap-1 rounded bg-cyan-500/15 hover:bg-cyan-500/25 px-2 py-0.5 text-[10px] font-mono text-cyan-300 border border-cyan-500/30 transition-colors"
+              className="flex items-center gap-1 rounded border border-a2a-flow/30 bg-a2a-flow/10 px-2 py-0.5 text-[10px] font-mono text-a2a-flow transition-colors hover:bg-a2a-flow/20"
             >
               #2 ➔ #8
             </button>
@@ -92,7 +101,7 @@ export function A2AConnectionHud({
                 onTestTrigger('@2', '@5', 'task: build')
                 setTimeout(() => onTestTrigger('@2', '@8', 'task: test'), 200)
               }}
-              className="flex items-center gap-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 px-2 py-0.5 text-[10px] font-mono text-emerald-300 border border-emerald-500/30 transition-colors"
+              className="flex items-center gap-1 rounded border border-a2a-target/30 bg-a2a-target/10 px-2 py-0.5 text-[10px] font-mono text-a2a-target transition-colors hover:bg-a2a-target/20"
             >
               分派 2➔5,8
             </button>
@@ -101,9 +110,9 @@ export function A2AConnectionHud({
           {/* Recent Trace History List */}
           <div className="max-h-56 overflow-y-auto scrollbar-sleek space-y-1.5 pr-1">
             {recentTraces.length === 0 ? (
-              <div className="py-6 text-center text-xs text-zinc-500">
+              <div className="py-6 text-center text-xs text-muted-foreground">
                 尚無 Agent 溝通記錄
-                <div className="mt-1 text-[10px] text-zinc-600">
+                <div className="mt-1 text-[10px] text-muted-foreground/70">
                   使用 orca bridge send @5 指令即可觸發連線痕跡
                 </div>
               </div>
@@ -115,25 +124,27 @@ export function A2AConnectionHud({
                     key={trace.id}
                     className={`group flex items-center justify-between rounded-lg p-2 text-xs border transition-all ${
                       isActive
-                        ? 'border-violet-500/50 bg-violet-500/10'
-                        : 'border-zinc-800/80 bg-zinc-900/50 hover:border-zinc-700'
+                        ? 'border-a2a-flow/50 bg-a2a-flow/10'
+                        : 'border-border/80 bg-card/50 hover:border-a2a-flow/30'
                     }`}
                   >
                     <div className="flex flex-col min-w-0 pr-2">
                       <div className="flex items-center gap-1.5 font-mono">
-                        <span className="font-bold text-violet-300">
+                        <span className="text-[9px] text-a2a-source/70">SRC</span>
+                        <span className="font-bold text-a2a-source">
                           {trace.fromIndex !== undefined ? `#${trace.fromIndex}` : trace.from}
                         </span>
-                        <span className="text-zinc-500">➔</span>
-                        <span className="font-bold text-emerald-300">
+                        <span className="text-a2a-flow">→</span>
+                        <span className="text-[9px] text-a2a-target/70">DST</span>
+                        <span className="font-bold text-a2a-target">
                           {trace.toIndex !== undefined ? `#${trace.toIndex}` : trace.to}
                         </span>
-                        <span className="text-[10px] text-zinc-500">
+                        <span className="text-[10px] text-muted-foreground">
                           {trace.type.toUpperCase()}
                         </span>
                       </div>
                       {trace.text && (
-                        <span className="truncate text-[11px] text-zinc-300 mt-0.5">
+                        <span className="mt-0.5 truncate text-[11px] text-foreground/80">
                           {trace.text}
                         </span>
                       )}
@@ -142,7 +153,7 @@ export function A2AConnectionHud({
                       type="button"
                       onClick={() => replayTrace(trace.id)}
                       title="重新播放通訊連線"
-                      className="rounded p-1 text-zinc-400 opacity-0 group-hover:opacity-100 hover:bg-zinc-800 hover:text-zinc-200 transition-opacity"
+                      className="rounded p-1 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-accent hover:text-foreground"
                     >
                       <RotateCcw className="size-3" />
                     </button>
@@ -161,12 +172,12 @@ export function A2AConnectionHud({
             type="button"
             onClick={() => setHudOpen(true)}
             data-testid="a2a-hud-trigger"
-            className="flex items-center gap-1.5 rounded-full border border-violet-500/40 bg-zinc-950/80 px-2.5 py-1 text-xs font-mono text-violet-300 shadow-lg backdrop-blur-md transition-all hover:scale-105 hover:bg-zinc-900"
+            className="flex items-center gap-1.5 rounded-full border border-a2a-flow/40 bg-a2a-canvas/90 px-2.5 py-1 text-xs font-mono text-a2a-flow shadow-floating backdrop-blur-md transition-all hover:scale-105 hover:bg-card"
           >
-            <Radio className="size-3 text-violet-400 animate-pulse" />
+            <Radio className="size-3 text-a2a-flow animate-pulse" />
             <span>A2A Trace</span>
             {activeLinks.length > 0 && (
-              <span className="rounded-full bg-violet-500/30 px-1.5 py-0.2 text-[10px] font-bold text-violet-200">
+              <span className="rounded-full bg-a2a-target/20 px-1.5 py-0.2 text-[10px] font-bold text-a2a-target-soft">
                 {activeLinks.length}
               </span>
             )}
@@ -175,7 +186,7 @@ export function A2AConnectionHud({
             type="button"
             onClick={() => setHubOpen(true)}
             title="開啟視覺化調度中樞 (Grokbot Hub)"
-            className="flex items-center justify-center size-6 rounded-full border border-violet-500/40 bg-violet-600/30 text-violet-200 hover:bg-violet-600/50 shadow-md backdrop-blur-md transition-transform hover:scale-110"
+            className="flex size-6 items-center justify-center rounded-full border border-a2a-source/40 bg-a2a-source/15 text-a2a-source-soft shadow-md backdrop-blur-md transition-transform hover:scale-110 hover:bg-a2a-source/30"
           >
             <Maximize2 className="size-3" />
           </button>

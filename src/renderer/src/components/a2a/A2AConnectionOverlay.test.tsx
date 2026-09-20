@@ -4,6 +4,54 @@ import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
 import { A2AConnectionOverlay } from './A2AConnectionOverlay'
 import { useA2AStore } from '../../store/a2a-traces-store'
 
+type Rect = {
+  left: number
+  top: number
+  width: number
+  height: number
+  right: number
+  bottom: number
+  x: number
+  y: number
+  toJSON: () => void
+}
+
+function setRect(
+  element: HTMLElement,
+  rect: Omit<Rect, 'right' | 'bottom' | 'x' | 'y' | 'toJSON'>
+) {
+  element.getBoundingClientRect = () => ({
+    ...rect,
+    right: rect.left + rect.width,
+    bottom: rect.top + rect.height,
+    x: rect.left,
+    y: rect.top,
+    toJSON: () => {}
+  })
+}
+
+function appendTerminalFixture(
+  index: number,
+  tabId: string,
+  tabRect: Omit<Rect, 'right' | 'bottom' | 'x' | 'y' | 'toJSON'>,
+  paneRect: Omit<Rect, 'right' | 'bottom' | 'x' | 'y' | 'toJSON'>
+): HTMLElement[] {
+  const tab = document.createElement('div')
+  tab.setAttribute('data-a2a-test-fixture', '')
+  tab.setAttribute('data-tab-id', tabId)
+  tab.setAttribute('data-tab-title', `Agent ${index}`)
+  tab.setAttribute('data-terminal-index', String(index))
+  setRect(tab, tabRect)
+
+  const terminalPane = document.createElement('div')
+  terminalPane.setAttribute('data-a2a-test-fixture', '')
+  terminalPane.setAttribute('data-terminal-tab-id', tabId)
+  setRect(terminalPane, paneRect)
+
+  document.body.append(tab, terminalPane)
+  return [tab, terminalPane]
+}
+
 describe('A2AConnectionOverlay', () => {
   beforeEach(() => {
     useA2AStore.getState().clearTraces()
@@ -11,6 +59,8 @@ describe('A2AConnectionOverlay', () => {
 
   afterEach(() => {
     cleanup()
+    document.querySelectorAll('[data-a2a-test-fixture]').forEach((element) => element.remove())
+    document.querySelectorAll('[data-a2a-test-menu-entry]').forEach((element) => element.remove())
     useA2AStore.getState().clearTraces()
   })
 
@@ -20,35 +70,20 @@ describe('A2AConnectionOverlay', () => {
   })
 
   it('renders SVG beams and badges when real terminal elements exist', () => {
-    const tab2 = document.createElement('div')
-    tab2.setAttribute('data-terminal-index', '2')
-    tab2.getBoundingClientRect = () => ({
-      left: 100,
-      top: 20,
-      width: 80,
-      height: 30,
-      right: 180,
-      bottom: 50,
-      x: 100,
-      y: 20,
-      toJSON: () => {}
-    })
-    document.body.appendChild(tab2)
-
-    const tab5 = document.createElement('div')
-    tab5.setAttribute('data-terminal-index', '5')
-    tab5.getBoundingClientRect = () => ({
-      left: 400,
-      top: 20,
-      width: 80,
-      height: 30,
-      right: 480,
-      bottom: 50,
-      x: 400,
-      y: 20,
-      toJSON: () => {}
-    })
-    document.body.appendChild(tab5)
+    const fixtureElements = [
+      ...appendTerminalFixture(
+        2,
+        'tab-2',
+        { left: 100, top: 20, width: 80, height: 30 },
+        { left: 100, top: 100, width: 300, height: 180 }
+      ),
+      ...appendTerminalFixture(
+        5,
+        'tab-5',
+        { left: 400, top: 20, width: 80, height: 30 },
+        { left: 800, top: 100, width: 300, height: 180 }
+      )
+    ]
 
     act(() => {
       useA2AStore.getState().addTrace({
@@ -68,26 +103,140 @@ describe('A2AConnectionOverlay', () => {
     expect(screen.getByText('#5')).toBeDefined()
     expect(screen.getByText('npm test')).toBeDefined()
 
+    const beamPath = container.querySelector('.a2a-link-beam .a2a-link-beam-flow')
+    expect(beamPath?.getAttribute('d')).toContain('M 250 190')
+    expect(beamPath?.getAttribute('d')).toMatch(/950 190$/)
+
+    fixtureElements.forEach((element) => document.body.removeChild(element))
+  })
+
+  it('renders an exaggerated directional energy motif on a grounded route', () => {
+    const fixtureElements = [
+      ...appendTerminalFixture(
+        2,
+        'motif-tab-2',
+        { left: 100, top: 20, width: 80, height: 30 },
+        { left: 100, top: 100, width: 300, height: 180 }
+      ),
+      ...appendTerminalFixture(
+        5,
+        'motif-tab-5',
+        { left: 400, top: 20, width: 80, height: 30 },
+        { left: 800, top: 100, width: 300, height: 180 }
+      )
+    ]
+
+    act(() => {
+      useA2AStore.getState().addTrace({
+        id: 'motif-proof',
+        from: '@2',
+        to: '@5',
+        type: 'send',
+        text: 'directed motif'
+      })
+    })
+
+    const { container } = render(<A2AConnectionOverlay />)
+    expect(container.querySelector('.a2a-link-beam-flow')?.getAttribute('stroke-width')).toBe('4.5')
+    expect(container.querySelector('.a2a-direction-carrier')).toBeDefined()
+    expect(container.querySelector('[class*="a2a-connection-effects-"]')).toBeDefined()
+
+    fixtureElements.forEach((element) => document.body.removeChild(element))
+  })
+
+  it('ignores tab badges and menu entries and anchors to the visible CLI pane center', () => {
+    const menuEntry = document.createElement('div')
+    menuEntry.setAttribute('data-a2a-test-menu-entry', '')
+    menuEntry.setAttribute('data-terminal-index', '2')
+    setRect(menuEntry, { left: 1600, top: 20, width: 120, height: 30 })
+    document.body.appendChild(menuEntry)
+
+    const hiddenWorkspace = document.createElement('div')
+    hiddenWorkspace.setAttribute('aria-hidden', 'true')
+    hiddenWorkspace.setAttribute('data-a2a-test-fixture', '')
+    const hiddenTab = document.createElement('div')
+    hiddenTab.setAttribute('data-tab-id', 'hidden-tab-2')
+    hiddenTab.setAttribute('data-tab-title', 'Hidden Agent 2')
+    hiddenTab.setAttribute('data-terminal-index', '2')
+    setRect(hiddenTab, { left: 10, top: 10, width: 80, height: 30 })
+    const hiddenPane = document.createElement('div')
+    hiddenPane.setAttribute('data-terminal-tab-id', 'hidden-tab-2')
+    setRect(hiddenPane, { left: 10, top: 10, width: 1200, height: 800 })
+    hiddenWorkspace.append(hiddenTab, hiddenPane)
+    document.body.appendChild(hiddenWorkspace)
+
+    const fixtureElements = [
+      ...appendTerminalFixture(
+        2,
+        'tab-2',
+        { left: 100, top: 20, width: 80, height: 30 },
+        { left: 140, top: 80, width: 240, height: 160 }
+      ),
+      ...appendTerminalFixture(
+        5,
+        'tab-5',
+        { left: 400, top: 20, width: 80, height: 30 },
+        { left: 760, top: 220, width: 240, height: 160 }
+      )
+    ]
+
+    act(() => {
+      useA2AStore.getState().addTrace({ from: '@2', to: '@5', text: 'real route' })
+    })
+
+    const { container } = render(<A2AConnectionOverlay />)
+    const beamPath = container.querySelector('.a2a-link-beam .a2a-link-beam-flow')
+    expect(beamPath?.getAttribute('d')).toMatch(/^M 260 160 /)
+    expect(beamPath?.getAttribute('d')).toMatch(/ 880 300$/)
+
+    fixtureElements.forEach((element) => document.body.removeChild(element))
+  })
+
+  it('re-measures the source and target centers after a pane layout change', () => {
+    const [tab2, pane2] = appendTerminalFixture(
+      2,
+      'tab-2',
+      { left: 100, top: 20, width: 80, height: 30 },
+      { left: 100, top: 100, width: 240, height: 160 }
+    )
+    const [tab5, pane5] = appendTerminalFixture(
+      5,
+      'tab-5',
+      { left: 400, top: 20, width: 80, height: 30 },
+      { left: 700, top: 100, width: 240, height: 160 }
+    )
+
+    act(() => {
+      useA2AStore.getState().addTrace({ from: '@2', to: '@5', text: 'reflow' })
+    })
+
+    const { container } = render(<A2AConnectionOverlay />)
+    const getBeamPath = () => container.querySelector('.a2a-link-beam .a2a-link-beam-flow')
+    expect(getBeamPath()?.getAttribute('d')).toContain('M 220 180')
+
+    setRect(pane2, { left: 300, top: 240, width: 200, height: 120 })
+    setRect(pane5, { left: 900, top: 40, width: 200, height: 120 })
+    act(() => {
+      fireEvent.resize(window)
+    })
+
+    expect(getBeamPath()?.getAttribute('d')).toMatch(/^M 400 300 /)
+    expect(getBeamPath()?.getAttribute('d')).toMatch(/ 1000 100$/)
+
     document.body.removeChild(tab2)
+    document.body.removeChild(pane2)
     document.body.removeChild(tab5)
+    document.body.removeChild(pane5)
   })
 
   it('prevents phantom beams to empty space when target terminal is not in DOM (Zero Phantom Beam)', () => {
-    // Only #1 is in DOM, #8 does NOT exist
-    const tab1 = document.createElement('div')
-    tab1.setAttribute('data-terminal-index', '1')
-    tab1.getBoundingClientRect = () => ({
-      left: 50,
-      top: 20,
-      width: 80,
-      height: 30,
-      right: 130,
-      bottom: 50,
-      x: 50,
-      y: 20,
-      toJSON: () => {}
-    })
-    document.body.appendChild(tab1)
+    // Only #1 is in DOM, #8 does NOT exist.
+    const [tab1, pane1] = appendTerminalFixture(
+      1,
+      'tab-1',
+      { left: 50, top: 20, width: 80, height: 30 },
+      { left: 50, top: 80, width: 260, height: 160 }
+    )
 
     act(() => {
       useA2AStore.getState().addTrace({
@@ -107,23 +256,16 @@ describe('A2AConnectionOverlay', () => {
     expect(screen.getByText('#8')).toBeDefined()
 
     document.body.removeChild(tab1)
+    document.body.removeChild(pane1)
   })
 
   it('allows dismissing an active trace via close button', () => {
-    const tab2 = document.createElement('div')
-    tab2.setAttribute('data-terminal-index', '2')
-    tab2.getBoundingClientRect = () => ({
-      left: 100,
-      top: 20,
-      width: 80,
-      height: 30,
-      right: 180,
-      bottom: 50,
-      x: 100,
-      y: 20,
-      toJSON: () => {}
-    })
-    document.body.appendChild(tab2)
+    const [tab2, pane2] = appendTerminalFixture(
+      2,
+      'tab-2',
+      { left: 100, top: 20, width: 80, height: 30 },
+      { left: 100, top: 80, width: 260, height: 160 }
+    )
 
     let traceId = ''
     act(() => {
@@ -146,6 +288,7 @@ describe('A2AConnectionOverlay', () => {
     expect(useA2AStore.getState().activeLinks).toHaveLength(0)
 
     document.body.removeChild(tab2)
+    document.body.removeChild(pane2)
   })
 
   it('toggles HUD and can trigger test traces', () => {

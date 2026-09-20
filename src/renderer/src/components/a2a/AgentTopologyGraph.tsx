@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react'
-import { Play, Terminal, ArrowRight } from 'lucide-react'
 import { useA2AStore } from '../../store/a2a-traces-store'
 import { useAppStore } from '../../store'
-import { PRESET_TAB_COLORS } from '../tab-bar/tab-colors'
-import type { A2ALinkEvent } from '../../../../shared/terminal-a2a-link'
+import { A2ATelemetrySummary } from './A2ATelemetrySummary'
+import { AgentTopologyEdges } from './AgentTopologyEdges'
+import { AgentTopologyInspector } from './AgentTopologyInspector'
+import { summarizeA2AConnections, type A2ADirectedConnection } from './a2a-telemetry'
 
 export type AgentNodeData = {
   index: number
@@ -39,13 +40,25 @@ function getRoleName(index: number, fallbackLabel?: string): string {
 }
 
 export function AgentTopologyGraph(): React.JSX.Element {
-  const { activeLinks, recentTraces, selectedAgentIndex, setSelectedAgentIndex, replayTrace } =
-    useA2AStore()
+  const activeLinks = useA2AStore((s) => s.activeLinks)
+  const recentTraces = useA2AStore((s) => s.recentTraces)
+  const selectedAgentIndex = useA2AStore((s) => s.selectedAgentIndex)
+  const setSelectedAgentIndex = useA2AStore((s) => s.setSelectedAgentIndex)
+  const replayTrace = useA2AStore((s) => s.replayTrace)
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null)
+  const [renderedAt] = useState(() => Date.now())
 
   const tabsByWorktree = useAppStore((s) => s.tabsByWorktree)
   const activeWorktreeId = Object.keys(tabsByWorktree)[0] || ''
-  const currentTabs = tabsByWorktree[activeWorktreeId] ?? []
+  const currentTabs = useMemo(
+    () => tabsByWorktree[activeWorktreeId] ?? [],
+    [tabsByWorktree, activeWorktreeId]
+  )
+
+  const telemetry = useMemo(
+    () => summarizeA2AConnections(recentTraces, activeLinks),
+    [recentTraces, activeLinks]
+  )
 
   // Discover all distinct agent indexes from recent traces and DOM
   const agents = useMemo<AgentNodeData[]>(() => {
@@ -56,10 +69,10 @@ export function AgentTopologyGraph(): React.JSX.Element {
       const tabElements = document.querySelectorAll('[data-terminal-index]')
       tabElements.forEach((el) => {
         const raw = el.getAttribute('data-terminal-index')
-        const idx = raw ? Number.parseInt(raw, 10) : NaN
+        const idx = raw ? Number.parseInt(raw, 10) : Number.NaN
         if (Number.isFinite(idx) && idx > 0) {
           const tabText = el.textContent?.trim() || ''
-          indexMap.set(idx, { label: tabText, lastSeen: Date.now() })
+          indexMap.set(idx, { label: tabText, lastSeen: renderedAt })
         }
       })
     }
@@ -84,13 +97,13 @@ export function AgentTopologyGraph(): React.JSX.Element {
 
     // Default agents if none yet
     if (indexMap.size === 0) {
-      indexMap.set(1, { lastSeen: Date.now() })
-      indexMap.set(2, { lastSeen: Date.now() })
-      indexMap.set(5, { lastSeen: Date.now() })
+      indexMap.set(1, { lastSeen: renderedAt })
+      indexMap.set(2, { lastSeen: renderedAt })
+      indexMap.set(5, { lastSeen: renderedAt })
     }
 
     const sortedIndexes = Array.from(indexMap.keys()).sort((a, b) => a - b)
-    const now = Date.now()
+    const now = renderedAt
 
     return sortedIndexes.map((idx) => {
       const info = indexMap.get(idx)
@@ -108,7 +121,7 @@ export function AgentTopologyGraph(): React.JSX.Element {
         tabId: tab?.id
       }
     })
-  }, [recentTraces, activeLinks, currentTabs])
+  }, [recentTraces, activeLinks, currentTabs, renderedAt])
 
   // Compute node positions on an SVG coordinate space (680 x 380)
   const nodePositions = useMemo(() => {
@@ -144,53 +157,14 @@ export function AgentTopologyGraph(): React.JSX.Element {
     return map
   }, [agents])
 
-  // Unique directed edges based on recent traces
-  const edges = useMemo(() => {
-    const edgeMap = new Map<
-      string,
-      {
-        id: string
-        fromIndex: number
-        toIndex: number
-        latestTrace: A2ALinkEvent
-        isActive: boolean
-        count: number
-      }
-    >()
-
-    for (const trace of recentTraces) {
-      if (!trace.fromIndex || !trace.toIndex || trace.fromIndex === trace.toIndex) {
-        continue
-      }
-      const key = `${trace.fromIndex}->${trace.toIndex}`
-      const existing = edgeMap.get(key)
-      const isActive = activeLinks.some(
-        (l) => l.fromIndex === trace.fromIndex && l.toIndex === trace.toIndex
-      )
-
-      if (!existing) {
-        edgeMap.set(key, {
-          id: key,
-          fromIndex: trace.fromIndex,
-          toIndex: trace.toIndex,
-          latestTrace: trace,
-          isActive,
-          count: 1
-        })
-      } else {
-        existing.count += 1
-        if (isActive) {
-          existing.isActive = true
-        }
-      }
-    }
-
-    return Array.from(edgeMap.values())
-  }, [recentTraces, activeLinks])
+  // Unique directed edges plus frequency telemetry for the topology report.
+  const edges: A2ADirectedConnection[] = telemetry.routes
 
   // Switch to terminal tab
   const handleTakeControl = (index: number) => {
-    if (typeof document === 'undefined') return
+    if (typeof document === 'undefined') {
+      return
+    }
     const targetTab = document.querySelector<HTMLElement>(`[data-terminal-index="${index}"]`)
     if (targetTab) {
       targetTab.click()
@@ -199,31 +173,47 @@ export function AgentTopologyGraph(): React.JSX.Element {
 
   const selectedAgent = agents.find((a) => a.index === selectedAgentIndex)
   const agentTraces = useMemo(() => {
-    if (!selectedAgentIndex) return []
+    if (!selectedAgentIndex) {
+      return []
+    }
     return recentTraces.filter(
       (t) => t.fromIndex === selectedAgentIndex || t.toIndex === selectedAgentIndex
     )
   }, [selectedAgentIndex, recentTraces])
 
   return (
-    <div className="relative flex flex-col size-full overflow-hidden bg-zinc-950/60 select-none">
+    <div className="relative flex flex-col size-full overflow-hidden bg-a2a-canvas/90 select-none">
+      <div className="border-b border-a2a-flow/15 bg-a2a-canvas/80">
+        <div className="flex items-center justify-between px-3 pt-2">
+          <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-a2a-flow/80">
+            A2A telemetry / directed mesh
+          </div>
+          <div className="font-mono text-[10px] text-muted-foreground/70">
+            window 60s · live source → target
+          </div>
+        </div>
+        <A2ATelemetrySummary telemetry={telemetry} />
+      </div>
+
       {/* Topology Canvas */}
       <div className="relative flex-1 min-h-[360px] flex items-center justify-center p-4">
         <svg
           viewBox="0 0 680 360"
           className="w-full h-full max-h-[380px] pointer-events-auto"
-          style={{ filter: 'drop-shadow(0 0 12px rgba(139, 92, 246, 0.15))' }}
+          style={{
+            filter: 'drop-shadow(0 0 12px color-mix(in srgb, var(--a2a-flow) 14%, transparent))'
+          }}
         >
           <defs>
             <linearGradient id="topo-edge-active" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#c084fc" stopOpacity="0.9" />
-              <stop offset="50%" stopColor="#38bdf8" stopOpacity="1" />
-              <stop offset="100%" stopColor="#34d399" stopOpacity="0.9" />
+              <stop offset="0%" stopColor="var(--a2a-source)" stopOpacity="0.95" />
+              <stop offset="50%" stopColor="var(--a2a-flow)" stopOpacity="1" />
+              <stop offset="100%" stopColor="var(--a2a-target)" stopOpacity="0.95" />
             </linearGradient>
 
             <linearGradient id="topo-edge-idle" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#64748b" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#475569" stopOpacity="0.4" />
+              <stop offset="0%" stopColor="var(--a2a-source)" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="var(--a2a-idle)" stopOpacity="0.55" />
             </linearGradient>
 
             <marker
@@ -235,7 +225,7 @@ export function AgentTopologyGraph(): React.JSX.Element {
               markerHeight="6"
               orient="auto-start-reverse"
             >
-              <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#38bdf8" />
+              <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="var(--a2a-target)" />
             </marker>
 
             <marker
@@ -247,107 +237,31 @@ export function AgentTopologyGraph(): React.JSX.Element {
               markerHeight="5"
               orient="auto-start-reverse"
             >
-              <path d="M 0 2 L 8 5 L 0 8 z" fill="#64748b" />
+              <path d="M 0 2 L 8 5 L 0 8 z" fill="var(--a2a-idle-soft)" />
             </marker>
           </defs>
 
           {/* Background Grid Pattern */}
           <pattern id="topo-grid" width="30" height="30" patternUnits="userSpaceOnUse">
-            <circle cx="15" cy="15" r="0.8" fill="#3f3f46" opacity="0.3" />
+            <circle cx="15" cy="15" r="0.8" fill="var(--a2a-flow)" opacity="0.18" />
           </pattern>
           <rect width="680" height="360" fill="url(#topo-grid)" />
 
-          {/* Directed Edges */}
-          {edges.map((edge) => {
-            const p1 = nodePositions.get(edge.fromIndex)
-            const p2 = nodePositions.get(edge.toIndex)
-            if (!p1 || !p2) return null
-
-            // Calculate curved path
-            const dx = p2.x - p1.x
-            const dy = p2.y - p1.y
-            const cx = (p1.x + p2.x) / 2 - dy * 0.18
-            const cy = (p1.y + p2.y) / 2 + dx * 0.18
-            const pathD = `M ${p1.x} ${p1.y} Q ${cx} ${cy} ${p2.x} ${p2.y}`
-
-            const isHovered = hoveredEdgeId === edge.id
-            const isEdgeSelected =
-              selectedAgentIndex === edge.fromIndex || selectedAgentIndex === edge.toIndex
-
-            return (
-              <g
-                key={edge.id}
-                className="cursor-pointer transition-opacity"
-                onMouseEnter={() => setHoveredEdgeId(edge.id)}
-                onMouseLeave={() => setHoveredEdgeId(null)}
-                onClick={() => replayTrace(edge.latestTrace.id)}
-              >
-                {/* Thick invisible hover target */}
-                <path d={pathD} fill="none" stroke="transparent" strokeWidth="24" />
-
-                {/* Visible Edge Line */}
-                <path
-                  d={pathD}
-                  fill="none"
-                  stroke={
-                    edge.isActive
-                      ? 'url(#topo-edge-active)'
-                      : isEdgeSelected
-                        ? '#a855f7'
-                        : 'url(#topo-edge-idle)'
-                  }
-                  strokeWidth={edge.isActive ? 3 : isEdgeSelected ? 2.5 : 1.5}
-                  strokeDasharray={edge.isActive ? '6 4' : undefined}
-                  markerEnd={edge.isActive ? 'url(#topo-arrow-active)' : 'url(#topo-arrow-idle)'}
-                  style={
-                    edge.isActive
-                      ? {
-                          animation: 'a2a-dash-flow 1.2s linear infinite'
-                        }
-                      : undefined
-                  }
-                />
-
-                {/* Animated Packet on Active Edge */}
-                {edge.isActive && (
-                  <circle r="4" fill="#ffffff" stroke="#38bdf8" strokeWidth="2">
-                    <animateMotion path={pathD} dur="1.2s" repeatCount="indefinite" />
-                  </circle>
-                )}
-
-                {/* Mid-point communication label */}
-                {(edge.isActive || isHovered) && (
-                  <g transform={`translate(${cx}, ${cy})`}>
-                    <rect
-                      x="-55"
-                      y="-11"
-                      width="110"
-                      height="22"
-                      rx="11"
-                      fill="#18181b"
-                      stroke={edge.isActive ? '#38bdf8' : '#71717a'}
-                      strokeWidth="1"
-                    />
-                    <text
-                      x="0"
-                      y="3.5"
-                      textAnchor="middle"
-                      fill="#e4e4e7"
-                      fontSize="9"
-                      fontFamily="monospace"
-                    >
-                      {edge.latestTrace.text?.slice(0, 14) || edge.latestTrace.type.toUpperCase()}
-                    </text>
-                  </g>
-                )}
-              </g>
-            )
-          })}
+          <AgentTopologyEdges
+            edges={edges}
+            nodePositions={nodePositions}
+            hoveredEdgeId={hoveredEdgeId}
+            selectedAgentIndex={selectedAgentIndex}
+            setHoveredEdgeId={setHoveredEdgeId}
+            replayTrace={replayTrace}
+          />
 
           {/* Agent Nodes */}
           {agents.map((agent) => {
             const pos = nodePositions.get(agent.index)
-            if (!pos) return null
+            if (!pos) {
+              return null
+            }
 
             const isSelected = selectedAgentIndex === agent.index
             return (
@@ -361,7 +275,13 @@ export function AgentTopologyGraph(): React.JSX.Element {
               >
                 {/* Ping / Radar ring if active */}
                 {agent.isCommunicating && (
-                  <circle r="36" fill="none" stroke="#c084fc" strokeWidth="1.5">
+                  <circle
+                    className="a2a-topology-radar"
+                    r="36"
+                    fill="none"
+                    stroke="var(--a2a-source)"
+                    strokeWidth="1.5"
+                  >
                     <animate
                       attributeName="r"
                       from="28"
@@ -382,20 +302,20 @@ export function AgentTopologyGraph(): React.JSX.Element {
                 {/* Base circle */}
                 <circle
                   r="28"
-                  fill="#18181b"
+                  fill="var(--a2a-canvas)"
                   stroke={
                     isSelected
-                      ? (agent.color || '#38bdf8')
+                      ? agent.color || 'var(--a2a-flow)'
                       : agent.color
                         ? agent.color
                         : agent.isCommunicating
-                          ? '#a855f7'
+                          ? 'var(--a2a-source)'
                           : agent.isActive
-                            ? '#10b981'
-                            : '#3f3f46'
+                            ? 'var(--a2a-target)'
+                            : 'var(--tab-group-split-divider-strong)'
                   }
                   strokeWidth={isSelected ? 3.5 : agent.color ? 2.5 : 2}
-                  filter="drop-shadow(0 4px 6px rgba(0,0,0,0.5))"
+                  filter="drop-shadow(0 4px 6px color-mix(in srgb, var(--a2a-canvas) 50%, transparent))"
                 />
 
                 {/* Inner Icon / Index Badge */}
@@ -403,7 +323,7 @@ export function AgentTopologyGraph(): React.JSX.Element {
                   x="0"
                   y="-4"
                   textAnchor="middle"
-                  fill="#ffffff"
+                  fill="var(--foreground)"
                   fontSize="13"
                   fontWeight="bold"
                   fontFamily="monospace"
@@ -416,7 +336,7 @@ export function AgentTopologyGraph(): React.JSX.Element {
                   x="0"
                   y="12"
                   textAnchor="middle"
-                  fill={agent.isActive ? '#a1a1aa' : '#71717a'}
+                  fill={agent.isActive ? 'var(--a2a-flow-soft)' : 'var(--muted-foreground)'}
                   fontSize="8"
                   fontWeight="600"
                 >
@@ -429,9 +349,13 @@ export function AgentTopologyGraph(): React.JSX.Element {
                   cy="-18"
                   r="5"
                   fill={
-                    agent.isCommunicating ? '#a855f7' : agent.isActive ? '#10b981' : '#71717a'
+                    agent.isCommunicating
+                      ? 'var(--a2a-source)'
+                      : agent.isActive
+                        ? 'var(--a2a-target)'
+                        : 'var(--muted-foreground)'
                   }
-                  stroke="#18181b"
+                  stroke="var(--a2a-canvas)"
                   strokeWidth="1.5"
                 />
               </g>
@@ -440,128 +364,35 @@ export function AgentTopologyGraph(): React.JSX.Element {
         </svg>
       </div>
 
-      {/* Selected Agent Inspector Panel */}
       {selectedAgent && (
-        <div className="border-t border-zinc-800/80 bg-zinc-900/80 p-3 backdrop-blur-md transition-all">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="flex size-8 items-center justify-center rounded-full bg-violet-600/20 font-mono text-xs font-bold text-violet-300 border border-violet-500/30">
-                #{selectedAgent.index}
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-sm text-zinc-100">{selectedAgent.role}</span>
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 text-[10px] font-medium ${
-                      selectedAgent.isCommunicating
-                        ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                        : selectedAgent.isActive
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                          : 'bg-zinc-800 text-zinc-400'
-                    }`}
-                  >
-                    <span className="size-1.5 rounded-full bg-current" />
-                    {selectedAgent.isCommunicating
-                      ? '通訊中'
-                      : selectedAgent.isActive
-                        ? '就緒'
-                        : '待命中'}
-                  </span>
-                </div>
-                <div className="text-xs text-zinc-400 font-mono">
-                  標識: @{selectedAgent.index} · 相關互動: {agentTraces.length} 次
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {selectedAgent.tabId && (
-                <div className="flex items-center gap-1.5 mr-2 rounded-md bg-zinc-800/60 px-2 py-1 border border-zinc-700/50">
-                  <span className="text-[11px] text-zinc-400 font-medium">框色:</span>
-                  <div className="flex items-center gap-1">
-                    {PRESET_TAB_COLORS.slice(0, 8).map((c) => (
-                      <button
-                        key={c.label}
-                        type="button"
-                        className={`size-3 rounded-full border transition-transform hover:scale-125 ${
-                          selectedAgent.color === c.value
-                            ? 'ring-1 ring-white ring-offset-1 ring-offset-zinc-900'
-                            : ''
-                        } ${c.value ? 'border-transparent' : 'border-zinc-500 bg-transparent'}`}
-                        style={c.value ? { backgroundColor: c.value } : undefined}
-                        onClick={() => {
-                          if (selectedAgent.tabId) {
-                            useAppStore.getState().setTabColor(selectedAgent.tabId, c.value)
-                          }
-                        }}
-                        title={c.label}
-                      />
-                    ))}
-                    <label
-                      className="relative flex size-3 cursor-pointer items-center justify-center rounded-full border border-dashed border-zinc-500 hover:border-zinc-300"
-                      title="自訂色彩"
-                    >
-                      <span className="text-[7px] leading-none text-zinc-400">+</span>
-                      <input
-                        type="color"
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        value={selectedAgent.color ?? '#3b82f6'}
-                        onChange={(e) => {
-                          if (selectedAgent.tabId) {
-                            useAppStore.getState().setTabColor(selectedAgent.tabId, e.target.value)
-                          }
-                        }}
-                      />
-                    </label>
-                  </div>
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={() => handleTakeControl(selectedAgent.index)}
-                className="flex items-center gap-1.5 rounded-lg border border-violet-500/40 bg-violet-600/20 px-3 py-1.5 text-xs font-medium text-violet-200 hover:bg-violet-600/30 transition-colors shadow-sm"
-              >
-                <Terminal className="size-3.5" />
-                <span>接管終端 (Take Control)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedAgentIndex(null)}
-                className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-
-          {/* Mini interaction list */}
-          {agentTraces.length > 0 && (
-            <div className="mt-2.5 max-h-24 overflow-y-auto space-y-1 pr-1">
-              {agentTraces.slice(0, 3).map((t) => (
-                <div
-                  key={t.id}
-                  className="flex items-center justify-between rounded bg-zinc-950/40 px-2 py-1 text-[11px] font-mono border border-zinc-800/40"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-violet-400">#{t.fromIndex ?? t.from}</span>
-                    <ArrowRight className="size-3 text-zinc-500" />
-                    <span className="text-emerald-400">#{t.toIndex ?? t.to}</span>
-                    <span className="text-zinc-300 truncate max-w-xs">{t.text || t.type}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => replayTrace(t.id)}
-                    className="text-zinc-500 hover:text-zinc-300"
-                    title="重播動效"
-                  >
-                    <Play className="size-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <AgentTopologyInspector
+          selectedAgent={selectedAgent}
+          agentTraces={agentTraces}
+          telemetry={telemetry}
+          onTakeControl={handleTakeControl}
+          onReplayTrace={replayTrace}
+          onClose={() => setSelectedAgentIndex(null)}
+        />
       )}
+
+      <style>{`
+        @keyframes a2a-topology-dash-flow {
+          from { stroke-dashoffset: 22; }
+          to { stroke-dashoffset: 0; }
+        }
+        .a2a-topology-flow {
+          animation: a2a-topology-dash-flow 1.2s linear infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .a2a-topology-flow {
+            animation: none !important;
+          }
+          .a2a-topology-packet,
+          .a2a-topology-radar {
+            display: none;
+          }
+        }
+      `}</style>
     </div>
   )
 }

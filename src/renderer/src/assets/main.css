@@ -68,6 +68,21 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-a2a-canvas: var(--a2a-canvas);
+  --color-a2a-source: var(--a2a-source);
+  --color-a2a-source-soft: var(--a2a-source-soft);
+  --color-a2a-target: var(--a2a-target);
+  --color-a2a-target-soft: var(--a2a-target-soft);
+  --color-a2a-flow: var(--a2a-flow);
+  --color-a2a-flow-soft: var(--a2a-flow-soft);
+  --color-a2a-idle: var(--a2a-idle);
+  --color-a2a-idle-soft: var(--a2a-idle-soft);
+  --color-a2a-warning: var(--a2a-warning);
+  --color-a2a-flame: var(--a2a-flame);
+  --color-a2a-leaf: var(--a2a-leaf);
+  --color-a2a-chain: var(--a2a-chain);
+  --color-a2a-water: var(--a2a-water);
+  --color-a2a-tornado: var(--a2a-tornado);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-worktree-sidebar: var(--worktree-sidebar);
@@ -174,6 +189,25 @@
   --border: #e5e5e5;
   --input: #e5e5e5;
   --ring: #a1a1a1;
+  --a2a-canvas: #070b14;
+  --a2a-source: #ff2bd6;
+  --a2a-source-soft: #f0abfc;
+  --a2a-target: #b6ff00;
+  --a2a-target-soft: #d9ff8a;
+  --a2a-flow: #00e5ff;
+  --a2a-flow-soft: #a5f3fc;
+  --a2a-idle: #155e75;
+  --a2a-idle-soft: #00a8c6;
+  --a2a-warning: #f59e0b;
+  --a2a-flame: #ff6b00;
+  --a2a-flame-core: #ffe600;
+  --a2a-leaf: #72ff5a;
+  --a2a-leaf-soft: #d5ff76;
+  --a2a-chain: #c7d2fe;
+  --a2a-chain-hot: #f0abfc;
+  --a2a-water: #38bdf8;
+  --a2a-water-hot: #a5f3fc;
+  --a2a-tornado: #d946ef;
   --terminal-pane-locate: var(--color-blue-600);
   --ai-action-accent: var(--color-violet-500);
   /* "An agent is asking you something" — one hue for every surface that shows
@@ -292,6 +326,25 @@
   --border: rgb(255 255 255 / 0.07);
   --input: rgb(255 255 255 / 0.15);
   --ring: #737373;
+  --a2a-canvas: #070b14;
+  --a2a-source: #ff2bd6;
+  --a2a-source-soft: #f0abfc;
+  --a2a-target: #b6ff00;
+  --a2a-target-soft: #d9ff8a;
+  --a2a-flow: #00e5ff;
+  --a2a-flow-soft: #a5f3fc;
+  --a2a-idle: #155e75;
+  --a2a-idle-soft: #00a8c6;
+  --a2a-warning: #f59e0b;
+  --a2a-flame: #ff6b00;
+  --a2a-flame-core: #ffe600;
+  --a2a-leaf: #72ff5a;
+  --a2a-leaf-soft: #d5ff76;
+  --a2a-chain: #c7d2fe;
+  --a2a-chain-hot: #f0abfc;
+  --a2a-water: #38bdf8;
+  --a2a-water-hot: #a5f3fc;
+  --a2a-tornado: #d946ef;
   --terminal-pane-locate: var(--color-blue-400);
   --ai-action-accent: var(--color-violet-400);
   --agent-question: var(--color-orange-500);
@@ -3051,4 +3104,179 @@ html.native-shell .app-layout {
   box-shadow:
     inset 0 1px 0 0 color-mix(in srgb, var(--foreground) 5%, transparent),
     0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+/* A2A energy lanes: one shared visual language for real source-to-target paths. */
+.a2a-link-beam,
+.a2a-topology-edge {
+  vector-effect: non-scaling-stroke;
+}
+
+.a2a-link-beam-flow,
+.a2a-link-beam-flow-core {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.a2a-link-beam-flow {
+  animation: a2a-beam-dash-flow 1.5s linear infinite;
+}
+
+@keyframes a2a-beam-dash-flow {
+  from {
+    stroke-dashoffset: 28;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.a2a-link-beam-flow-core {
+  animation: a2a-beam-core-flow 0.78s linear infinite;
+}
+
+@keyframes a2a-beam-core-flow {
+  from {
+    stroke-dashoffset: 28;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.a2a-connection-effects {
+  pointer-events: none;
+  overflow: visible;
+}
+
+.a2a-direction-carrier {
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--a2a-target) 70%, transparent));
+}
+
+.a2a-motif-carrier {
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--a2a-flow) 50%, transparent));
+}
+
+.a2a-motif-flame-carrier {
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--a2a-flame) 80%, transparent));
+}
+
+.a2a-motif-flame-tail {
+  fill: var(--a2a-flame);
+  opacity: 0.92;
+}
+
+.a2a-motif-flame-core {
+  fill: var(--a2a-flame-core);
+  stroke: var(--a2a-flame);
+  stroke-width: 1.5;
+}
+
+.a2a-motif-ember {
+  fill: var(--a2a-flame-core);
+  stroke: var(--a2a-flame);
+  stroke-width: 1.2;
+}
+
+.a2a-motif-vine {
+  fill: none;
+  stroke: var(--a2a-leaf);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.a2a-motif-leaf,
+.a2a-motif-leaf-soft {
+  stroke: var(--a2a-leaf);
+  stroke-width: 1.1;
+}
+
+.a2a-motif-leaf {
+  fill: var(--a2a-leaf);
+}
+
+.a2a-motif-leaf-soft {
+  fill: var(--a2a-leaf-soft);
+}
+
+.a2a-motif-chain-link,
+.a2a-motif-chain-link-hot {
+  fill: color-mix(in srgb, var(--a2a-chain) 24%, var(--a2a-canvas));
+  stroke: var(--a2a-chain);
+  stroke-width: 2.4;
+}
+
+.a2a-motif-chain-link-hot {
+  stroke: var(--a2a-chain-hot);
+}
+
+.a2a-motif-water-column,
+.a2a-motif-water-splash {
+  fill: none;
+  stroke: var(--a2a-water);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.a2a-motif-water-column {
+  stroke-width: 4;
+}
+
+.a2a-motif-water-splash {
+  stroke: var(--a2a-water-hot);
+  stroke-width: 2.3;
+}
+
+.a2a-motif-water-drop {
+  fill: var(--a2a-water-hot);
+  stroke: var(--a2a-water);
+  stroke-width: 1;
+}
+
+.a2a-motif-tornado-spin {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: a2a-tornado-spin 1.15s linear infinite;
+}
+
+@keyframes a2a-tornado-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.a2a-motif-tornado-arc,
+.a2a-motif-tornado-arc-soft {
+  fill: none;
+  stroke: var(--a2a-tornado);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.a2a-motif-tornado-arc-soft {
+  stroke: var(--a2a-flow);
+  stroke-width: 1.4;
+}
+
+.a2a-motif-tornado-eye {
+  fill: color-mix(in srgb, var(--a2a-tornado) 30%, var(--a2a-canvas));
+  stroke: var(--a2a-tornado);
+  stroke-width: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .a2a-link-beam-flow,
+  .a2a-link-beam-flow-core,
+  .a2a-motif-tornado-spin {
+    animation: none !important;
+  }
+
+  .a2a-link-beam-pulse {
+    display: none;
+  }
+
+  .a2a-connection-effects {
+    display: none;
+  }
 }
