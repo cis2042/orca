@@ -42,4 +42,26 @@ describe('TerminalProcessExitOverlay', () => {
 
     expect(screen.getByRole('alert').textContent).toContain('exit code 7')
   })
+
+  it('displays the interrupted command and shows a resume action', () => {
+    const onRestart = vi.fn()
+    render(
+      <TerminalProcessExitOverlay
+        processExit={{
+          paneId: 1,
+          exitCode: 130,
+          reason: 'process-failed',
+          startup: { command: 'agent --resume cursor-session-1' }
+        }}
+        onRestart={onRestart}
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.getByRole('alert').textContent).toContain('agent --resume cursor-session-1')
+    const resumeButton = screen.getByRole('button', { name: 'Resume' })
+    expect(resumeButton).toBeDefined()
+    fireEvent.click(resumeButton)
+    expect(onRestart).toHaveBeenCalledOnce()
+  })
 })

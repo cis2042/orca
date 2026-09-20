@@ -26,14 +26,16 @@ describe('terminal process exit restart', () => {
     ).toBeNull()
   })
 
-  it('restarts other process failures as a shell', () => {
+  it('retries the original startup after other process failures to enable seamless resume', () => {
+    const startup = { command: 'agent --resume session-1' }
+
     expect(
       resolveTerminalProcessExitRestartStartup({
         paneId: 1,
         exitCode: 7,
         reason: 'process-failed',
-        startup: { command: 'codex' }
+        startup
       })
-    ).toBeNull()
+    ).toBe(startup)
   })
 })

@@ -32,6 +32,16 @@ export function TerminalProcessExitOverlay({
         'The shell process ended with exit code {{code}}. Its output is preserved.'
       ).replace('{{code}}', String(processExit.exitCode))
 
+  const startupCommand = processExit.startup?.command?.trim()
+  const isResumeAction = Boolean(
+    startupCommand && (startupCommand.includes('--resume') || startupCommand.includes('resume'))
+  )
+  const restartButtonText = isResumeAction
+    ? translate('auto.components.terminal.pane.TerminalProcessExitOverlay.resume', 'Resume')
+    : startupCommand
+      ? translate('auto.components.terminal.pane.TerminalProcessExitOverlay.rerun', 'Rerun')
+      : translate('auto.components.terminal.pane.TerminalProcessExitOverlay.restart', 'Restart')
+
   return (
     <div className="pointer-events-none absolute inset-0 z-40 flex items-end justify-center p-4">
       <div
@@ -41,6 +51,12 @@ export function TerminalProcessExitOverlay({
         <div className="space-y-1">
           <div className="text-sm font-medium text-foreground">{title}</div>
           <div className="text-xs text-muted-foreground">{detail}</div>
+          {startupCommand && (
+            <div className="mt-2 rounded border border-border/60 bg-muted/40 px-2.5 py-1.5 font-mono text-[11px] text-foreground/90 break-all select-text">
+              <span className="mr-1.5 text-muted-foreground">$</span>
+              {startupCommand}
+            </div>
+          )}
         </div>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>
@@ -49,10 +65,7 @@ export function TerminalProcessExitOverlay({
           </Button>
           <Button type="button" size="sm" onClick={onRestart}>
             <RotateCw />
-            {translate(
-              'auto.components.terminal.pane.TerminalProcessExitOverlay.restart',
-              'Restart'
-            )}
+            {restartButtonText}
           </Button>
         </div>
       </div>

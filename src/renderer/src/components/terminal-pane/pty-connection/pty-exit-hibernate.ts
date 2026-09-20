@@ -300,7 +300,7 @@ export function installPtyExitHibernate(session: ConnectPanePtySession): void {
       session.deps.onPaneProcessDied({
         paneId: session.pane.id,
         exitCode,
-        startup: gitBashConsoleCapacityFailure ? processExitState.startup : null,
+        startup: processExitState.startup ?? null,
         reason: gitBashConsoleCapacityFailure ? 'git-bash-console-capacity' : 'process-failed'
       })
       return

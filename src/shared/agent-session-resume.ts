@@ -13,6 +13,7 @@ export const RESUMABLE_TUI_AGENTS = [
   'droid',
   'grok',
   'devin',
+  'cursor',
   'omp',
   'prime-agent',
   'copilot',
@@ -235,8 +236,16 @@ export function extractAgentProviderSession(
       const id = readSessionId(payload, ['session_id', 'sessionId'])
       return id ? { key: 'session_id', id } : null
     }
+    case 'cursor': {
+      const id = readSessionId(payload, [
+        'sessionId',
+        'session_id',
+        'conversationId',
+        'conversation_id'
+      ])
+      return id ? { key: 'session_id', id } : null
+    }
     case 'amp':
-    case 'cursor':
     case 'command-code':
     case 'hermes':
       return null
@@ -276,6 +285,8 @@ export function getAgentResumeArgv(
       return providerSession.key === 'session_id' ? ['grok', '--resume', id] : null
     case 'devin':
       return providerSession.key === 'session_id' ? ['devin', '--resume', id] : null
+    case 'cursor':
+      return providerSession.key === 'session_id' ? ['agent', '--resume', id] : null
     case 'omp':
       return providerSession.key === 'session_id'
         ? ['omp', '--resume', ompResumeFilePath?.trim() || id]

@@ -28,6 +28,10 @@ describe('agent session resume metadata', () => {
     expect(isResumableTuiAgent('kimi')).toBe(true)
   })
 
+  it('treats Cursor as a resumable TUI agent', () => {
+    expect(isResumableTuiAgent('cursor')).toBe(true)
+  })
+
   it.each([
     ['claude', { session_id: 'claude-session' }, { key: 'session_id', id: 'claude-session' }],
     ['codex', { session_id: 'codex-session' }, { key: 'session_id', id: 'codex-session' }],
@@ -63,7 +67,9 @@ describe('agent session resume metadata', () => {
       'kimi',
       { session_id: 'session_431324d7-2165-42f0-9ecd-9f93437b3201' },
       { key: 'session_id', id: 'session_431324d7-2165-42f0-9ecd-9f93437b3201' }
-    ]
+    ],
+    ['cursor', { session_id: 'cursor-123' }, { key: 'session_id', id: 'cursor-123' }],
+    ['cursor', { sessionId: 'cursor-456' }, { key: 'session_id', id: 'cursor-456' }]
   ] as const)('extracts %s provider session ids', (source, payload, expected) => {
     expect(extractAgentProviderSession(source, payload)).toEqual(expected)
   })
@@ -83,6 +89,7 @@ describe('agent session resume metadata', () => {
     ['droid', { key: 'session_id', id: 's1' }, ['droid', '--resume', 's1']],
     ['grok', { key: 'session_id', id: 's1' }, ['grok', '--resume', 's1']],
     ['devin', { key: 'session_id', id: 'abc12345' }, ['devin', '--resume', 'abc12345']],
+    ['cursor', { key: 'session_id', id: 'cursor-123' }, ['agent', '--resume', 'cursor-123']],
     ['omp', { key: 'session_id', id: 's1' }, ['omp', '--resume', 's1']],
     [
       'prime-agent',
@@ -100,7 +107,7 @@ describe('agent session resume metadata', () => {
   })
 
   it('rejects unsupported sources and unsafe ids', () => {
-    expect(extractAgentProviderSession('cursor', { session_id: 'cursor-session' })).toBeNull()
+    expect(extractAgentProviderSession('amp', { session_id: 'amp-session' })).toBeNull()
     expect(normalizeAgentProviderSession({ key: 'session_id', id: 'bad\nid' })).toBeNull()
     expect(normalizeAgentProviderSession({ key: 'session_id', id: '--last' })).toBeNull()
     expect(extractAgentProviderSession('codex', { session_id: '--last' })).toBeNull()
