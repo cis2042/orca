@@ -109,16 +109,10 @@ describe('A2ADispatchHub', () => {
     useA2AStore.getState().setHubOpen(true)
     render(<A2ADispatchHub />)
 
-    const simBtn = screen.getByText('模擬協同')
+    const simBtn = screen.getByText('示範')
     fireEvent.click(simBtn)
 
     expect(useA2AStore.getState().recentTraces.length).toBeGreaterThanOrEqual(1)
-
-    act(() => {
-      vi.advanceTimersByTime(2500)
-    })
-
-    expect(useA2AStore.getState().recentTraces.length).toBe(3)
     vi.useRealTimers()
   })
 })

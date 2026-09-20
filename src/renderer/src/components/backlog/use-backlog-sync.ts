@@ -2,7 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/store'
 import { parseTerminalIndex, type A2ALinkEvent } from '../../../../shared/terminal-a2a-link'
-import type { AssignedAgentInfo, BacklogItem } from '../../../../shared/backlog-types'
+import type {
+  AssignedAgentInfo,
+  BacklogItem,
+  BacklogItemStatus
+} from '../../../../shared/backlog-types'
 import { useBacklogStore } from '../../store/backlog-store'
 
 export function useBacklogSync(): {
@@ -16,6 +20,8 @@ export function useBacklogSync(): {
   const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
   const allWorktrees = useAppStore((s) => s.allWorktrees)
   const tabsByWorktree = useAppStore((s) => s.tabsByWorktree)
+  const repos = useAppStore((s) => s.repos)
+  const fetchWorkItems = useAppStore((s) => s.fetchWorkItems)
   const items = useBacklogStore((s) => s.items)
   const customItems = useBacklogStore((s) => s.customItems)
   const setItems = useBacklogStore((s) => s.setItems)
@@ -29,12 +35,22 @@ export function useBacklogSync(): {
     return allWorktrees().find((w) => w.id === activeWorktreeId) ?? null
   }, [activeWorktreeId, allWorktrees])
 
+  const targetRepo = useMemo(() => {
+    if (!activeWorktree) {
+      return repos[0] ?? null
+    }
+    return repos.find((r) => r.id === activeWorktree.repoId) ?? repos[0] ?? null
+  }, [activeWorktree, repos])
+
   const sessionInfo = useMemo(() => {
-    const worktreePath = activeWorktree?.path ?? ''
-    const repoName = worktreePath.split(/[/\\]/).pop() || 'orca-workspace'
-    const branch = activeWorktree?.branch || 'feat/smux-terminal-bridge-and-mentions'
+    const worktreePath = activeWorktree?.path ?? targetRepo?.path ?? ''
+    const repoName =
+      targetRepo?.displayName ||
+      (worktreePath ? worktreePath.split(/[/\\]/).pop() : '') ||
+      'orca-workspace'
+    const branch = activeWorktree?.branch || 'main'
     return { repoName, branch, worktreePath }
-  }, [activeWorktree])
+  }, [activeWorktree, targetRepo])
 
   // Active agents in current worktree
   const activeAgents = useMemo<AssignedAgentInfo[]>(() => {
@@ -62,104 +78,128 @@ export function useBacklogSync(): {
     return agents
   }, [activeWorktreeId, tabsByWorktree])
 
-  // Fetch or construct backlog items from PRs, Issues, and Branches
+  // Fetch real backlog items from GitHub PRs, Issues, and Branches
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
       const fetchedItems: BacklogItem[] = []
       const currentBranch = sessionInfo.branch
 
-      // 1. Current and known branches
-      fetchedItems.push({
-        id: `branch-current`,
-        kind: 'branch',
-        title: `Branch: ${currentBranch}`,
-        ref: currentBranch,
-        status: 'in_progress',
-        assignedAgent: activeAgents.find((a) => a.index === 2) ?? activeAgents[0],
-        updatedAt: Date.now()
-      })
+      // 1. Current active branch
+      if (currentBranch) {
+        fetchedItems.push({
+          id: `branch-${currentBranch}`,
+          kind: 'branch',
+          title: `Branch: ${currentBranch}`,
+          ref: currentBranch,
+          status: 'in_progress',
+          assignedAgent: activeAgents.find((a) => a.index === 2) ?? activeAgents[0],
+          updatedAt: Date.now()
+        })
+      }
 
-      fetchedItems.push({
-        id: `branch-main`,
-        kind: 'branch',
-        title: 'Branch: main (upstream tracking)',
-        ref: 'main',
-        status: 'completed',
-        updatedAt: Date.now() - 3600000
-      })
+      // Upstream tracking branch
+      if (currentBranch !== 'main') {
+        fetchedItems.push({
+          id: 'branch-main',
+          kind: 'branch',
+          title: 'Branch: main (upstream tracking)',
+          ref: 'main',
+          status: 'completed',
+          updatedAt: Date.now() - 3600000
+        })
+      }
 
-      // 2. PRs (from GitHub or active session)
-      fetchedItems.push({
-        id: `pr-110`,
-        kind: 'pr',
-        title: 'PR #110: A2A Real PTY Dispatch & HTML Drag-Drop Preview',
-        number: 110,
-        ref: currentBranch,
-        status: 'completed',
-        author: 'cis2042',
-        labels: ['enhancement', 'verified'],
-        assignedAgent: activeAgents.find((a) => a.index === 2),
-        updatedAt: Date.now() - 600000
-      })
+      // Other open worktree branches
+      if (typeof allWorktrees === 'function') {
+        const otherTrees = allWorktrees().filter(
+          (w) =>
+            w.id !== activeWorktreeId &&
+            w.branch &&
+            w.branch !== currentBranch &&
+            w.branch !== 'main'
+        )
+        for (const tree of otherTrees.slice(0, 4)) {
+          fetchedItems.push({
+            id: `branch-${tree.id}`,
+            kind: 'branch',
+            title: `Branch: ${tree.branch}`,
+            ref: tree.branch!,
+            status: tree.workspaceStatus === 'active' ? 'in_progress' : 'todo',
+            updatedAt: tree.lastActivityAt || Date.now()
+          })
+        }
+      }
 
-      fetchedItems.push({
-        id: `pr-109`,
-        kind: 'pr',
-        title: 'PR #109: Terminal auto-scroll to bottom on focus & click',
-        number: 109,
-        ref: 'fix/terminal-scroll-on-click',
-        status: 'in_progress',
-        author: 'cis2042',
-        labels: ['ux', 'bugfix'],
-        assignedAgent: activeAgents.find((a) => a.index === 4) ?? activeAgents[0],
-        updatedAt: Date.now()
-      })
+      // 2. Fetch real GitHub PRs & Issues from active repository
+      const repoId = targetRepo?.id ?? activeWorktree?.repoId
+      const repoPath = targetRepo?.path ?? activeWorktree?.path
+      if (repoId && repoPath && typeof fetchWorkItems === 'function') {
+        try {
+          const ghItems = await fetchWorkItems(repoId, repoPath, 30, '', { force: true })
+          if (Array.isArray(ghItems)) {
+            for (const ghItem of ghItems) {
+              const isPr = ghItem.type === 'pr'
+              const isCompleted = ghItem.state === 'closed' || ghItem.state === 'merged'
+              const isCurrentBranch = Boolean(
+                ghItem.branchName && ghItem.branchName === currentBranch
+              )
+              const isLinked = isPr
+                ? activeWorktree?.linkedPR === ghItem.number
+                : activeWorktree?.linkedIssue === ghItem.number
 
-      // 3. Issues
-      fetchedItems.push({
-        id: `issue-278`,
-        kind: 'issue',
-        title: 'Issue #278: Terminal messages jump to top when switching tabs',
-        number: 278,
-        status: 'in_progress',
-        labels: ['terminal', 'scroll'],
-        assignedAgent: activeAgents.find((a) => a.index === 4) ?? activeAgents[1],
-        updatedAt: Date.now()
-      })
+              let status: BacklogItemStatus = 'todo'
+              if (isCompleted) {
+                status = 'completed'
+              } else if (isPr || isCurrentBranch || isLinked) {
+                status = 'in_progress'
+              }
 
-      fetchedItems.push({
-        id: `issue-280`,
-        kind: 'issue',
-        title: 'Issue #280: Backlog Agent with live multi-agent sync & checklist view',
-        number: 280,
-        status: 'in_progress',
-        labels: ['feature', 'backlog'],
-        assignedAgent: activeAgents.find((a) => a.index === 1),
-        updatedAt: Date.now()
-      })
+              let assignedAgent: AssignedAgentInfo | undefined
+              if (isCurrentBranch || isLinked) {
+                assignedAgent = activeAgents.find((a) => a.index === 2) ?? activeAgents[0]
+              }
 
-      fetchedItems.push({
-        id: `issue-265`,
-        kind: 'issue',
-        title: 'Issue #265: Fast Jev Compaction human-readable terminal output',
-        number: 265,
-        status: 'completed',
-        labels: ['cli', 'formatting'],
-        updatedAt: Date.now() - 7200000
-      })
+              fetchedItems.push({
+                id: `gh-${ghItem.type}-${ghItem.number}`,
+                kind: isPr ? 'pr' : 'issue',
+                title: `${isPr ? 'PR' : 'Issue'} #${ghItem.number}: ${ghItem.title}`,
+                number: ghItem.number,
+                ref: ghItem.branchName,
+                url: ghItem.url,
+                status,
+                assignedAgent,
+                labels: ghItem.labels,
+                author: ghItem.author ?? undefined,
+                updatedAt: ghItem.updatedAt ? new Date(ghItem.updatedAt).getTime() : Date.now()
+              })
+            }
+          }
+        } catch (err: unknown) {
+          console.warn('[BacklogSync] Failed to fetch GitHub items for repo:', repoId, err)
+        }
+      }
 
       setItems(fetchedItems)
+    } catch (err: unknown) {
+      console.warn('[BacklogSync] Failed to refresh backlog items:', err)
     } finally {
       setLoading(false)
     }
-  }, [sessionInfo.branch, activeAgents, setItems])
+  }, [
+    sessionInfo.branch,
+    activeAgents,
+    allWorktrees,
+    activeWorktreeId,
+    targetRepo,
+    activeWorktree,
+    fetchWorkItems,
+    setItems
+  ])
 
   useEffect(() => {
-    if (items.length === 0) {
-      void refresh()
-    }
-  }, [items.length, refresh])
+    void refresh()
+  }, [activeWorktreeId, refresh])
 
   // Dispatch a backlog task to a specific agent terminal PTY
   const dispatchTaskToAgent = useCallback(

@@ -122,6 +122,7 @@ const WorktreeList = React.memo(function WorktreeList({
   const effectiveCollapsedGroups = useEffectiveCollapsedGroups({
     collapsedGroups,
     agentSendTargetWorktreeId,
+    activeWorktreeId: currentSidebarWorktreeId,
     groupBy,
     pinnedDisplayPolicy,
     visibleWorktrees,

@@ -19,7 +19,37 @@ describe('A2AConnectionOverlay', () => {
     expect(screen.getByTestId('a2a-connection-overlay')).toBeDefined()
   })
 
-  it('renders SVG beams and badges when an active link is present', () => {
+  it('renders SVG beams and badges when real terminal elements exist', () => {
+    const tab2 = document.createElement('div')
+    tab2.setAttribute('data-terminal-index', '2')
+    tab2.getBoundingClientRect = () => ({
+      left: 100,
+      top: 20,
+      width: 80,
+      height: 30,
+      right: 180,
+      bottom: 50,
+      x: 100,
+      y: 20,
+      toJSON: () => {}
+    })
+    document.body.appendChild(tab2)
+
+    const tab5 = document.createElement('div')
+    tab5.setAttribute('data-terminal-index', '5')
+    tab5.getBoundingClientRect = () => ({
+      left: 400,
+      top: 20,
+      width: 80,
+      height: 30,
+      right: 480,
+      bottom: 50,
+      x: 400,
+      y: 20,
+      toJSON: () => {}
+    })
+    document.body.appendChild(tab5)
+
     act(() => {
       useA2AStore.getState().addTrace({
         from: '@2',
@@ -37,9 +67,64 @@ describe('A2AConnectionOverlay', () => {
     expect(screen.getByText('#2')).toBeDefined()
     expect(screen.getByText('#5')).toBeDefined()
     expect(screen.getByText('npm test')).toBeDefined()
+
+    document.body.removeChild(tab2)
+    document.body.removeChild(tab5)
+  })
+
+  it('prevents phantom beams to empty space when target terminal is not in DOM (Zero Phantom Beam)', () => {
+    // Only #1 is in DOM, #8 does NOT exist
+    const tab1 = document.createElement('div')
+    tab1.setAttribute('data-terminal-index', '1')
+    tab1.getBoundingClientRect = () => ({
+      left: 50,
+      top: 20,
+      width: 80,
+      height: 30,
+      right: 130,
+      bottom: 50,
+      x: 50,
+      y: 20,
+      toJSON: () => {}
+    })
+    document.body.appendChild(tab1)
+
+    act(() => {
+      useA2AStore.getState().addTrace({
+        from: '@1',
+        to: '@8',
+        type: 'send',
+        text: 'test empty target'
+      })
+    })
+
+    const { container } = render(<A2AConnectionOverlay />)
+    // Beams must NOT be drawn to empty space
+    expect(container.querySelector('.a2a-link-beam')).toBeNull()
+
+    // Localized indicator should still be present near #1
+    expect(screen.getByText('#1')).toBeDefined()
+    expect(screen.getByText('#8')).toBeDefined()
+
+    document.body.removeChild(tab1)
   })
 
   it('allows dismissing an active trace via close button', () => {
+    const tab2 = document.createElement('div')
+    tab2.setAttribute('data-terminal-index', '2')
+    tab2.getBoundingClientRect = () => ({
+      left: 100,
+      top: 20,
+      width: 80,
+      height: 30,
+      right: 180,
+      bottom: 50,
+      x: 100,
+      y: 20,
+      toJSON: () => {}
+    })
+    document.body.appendChild(tab2)
+
     let traceId = ''
     act(() => {
       const trace = useA2AStore.getState().addTrace({
@@ -59,6 +144,8 @@ describe('A2AConnectionOverlay', () => {
     fireEvent.click(dismissBtn)
 
     expect(useA2AStore.getState().activeLinks).toHaveLength(0)
+
+    document.body.removeChild(tab2)
   })
 
   it('toggles HUD and can trigger test traces', () => {

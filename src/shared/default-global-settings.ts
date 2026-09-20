@@ -33,6 +33,7 @@ export function buildDefaultSettings(args: {
     workspaceDir: args.workspaceDir,
     worktreeVisibilityDefaults: { external: 'hide' },
     nestWorkspaces: true,
+    autoCollapseLineageChildren: true,
     workspaceDirHistory: [],
     refreshLocalBaseRefOnWorktreeCreate: false,
     localBaseRefSuggestionDismissed: false,

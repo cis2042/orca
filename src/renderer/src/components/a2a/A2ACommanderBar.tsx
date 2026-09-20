@@ -46,8 +46,6 @@ export function A2ACommanderBar(): React.JSX.Element {
 
     if (indexes.size === 0) {
       indexes.add(1)
-      indexes.add(2)
-      indexes.add(5)
     }
 
     const sorted = Array.from(indexes).sort((a, b) => a - b)

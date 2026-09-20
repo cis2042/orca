@@ -18,6 +18,7 @@ import { getWorktreeLineageAncestors } from '../../worktree-lineage-projection'
 export function useEffectiveCollapsedGroups(args: {
   collapsedGroups: Set<string>
   agentSendTargetWorktreeId: string | null
+  activeWorktreeId?: string | null
   groupBy: WorktreeGroupBy
   pinnedDisplayPolicy: PinnedWorktreeDisplayPolicy
   visibleWorktrees: readonly Worktree[]
@@ -35,6 +36,7 @@ export function useEffectiveCollapsedGroups(args: {
   const {
     collapsedGroups,
     agentSendTargetWorktreeId,
+    activeWorktreeId,
     groupBy,
     pinnedDisplayPolicy,
     visibleWorktrees,
@@ -50,29 +52,47 @@ export function useEffectiveCollapsedGroups(args: {
     defaultHostId
   } = args
   return useMemo(() => {
-    if (!agentSendTargetWorktreeId) {
-      return collapsedGroups
+    const next = new Set(collapsedGroups)
+
+    // 1. Lineage child workspaces default to collapsed to prevent sidebar clutter.
+    // Every parent with lineage children is collapsed by default unless explicitly expanded by the user
+    // (where user clicking the lineage toggle registers the parentKey in collapsedGroups to request expansion).
+    if (settings?.autoCollapseLineageChildren) {
+      const lineages = worktreeLineageById ? Object.values(worktreeLineageById) : []
+      for (const lineage of lineages) {
+        if (lineage?.parentWorktreeId) {
+          const parentKey = getLineageGroupKey(lineage.parentWorktreeId)
+          if (collapsedGroups.has(parentKey)) {
+            // Explicit user toggle requests expansion
+            next.delete(parentKey)
+          } else {
+            // Default: keep collapsed
+            next.add(parentKey)
+          }
+        }
+      }
     }
-    const targetWorktree = worktreeMap.get(agentSendTargetWorktreeId)
+
+    const revealTargetId = agentSendTargetWorktreeId ?? activeWorktreeId
+    if (!revealTargetId) {
+      return next
+    }
+    const targetWorktree = worktreeMap.get(revealTargetId)
     if (!targetWorktree) {
-      // Why: folder workspaces are absent from worktreeMap, so without this the
-      // agent-send picker could never open the section hiding one (#15362).
       const folderKeys = getFolderWorkspaceRevealGroupKeys(
-        agentSendTargetWorktreeId,
+        revealTargetId,
         folderWorkspaces,
         projectGroups,
         { groupBy, workspaceStatuses, defaultHostId }
       )
       if (folderKeys.length === 0) {
-        return collapsedGroups
+        return next
       }
-      const nextForFolder = new Set(collapsedGroups)
       for (const groupKey of folderKeys) {
-        nextForFolder.delete(groupKey)
+        next.delete(groupKey)
       }
-      return nextForFolder
+      return next
     }
-    const next = new Set(collapsedGroups)
     if (
       pinnedDisplayPolicy === 'single-location' &&
       isPinnedSectionWorktree(targetWorktree, visibleWorktrees, worktreeLineageById, worktreeMap)
@@ -102,6 +122,7 @@ export function useEffectiveCollapsedGroups(args: {
     }
     return next
   }, [
+    activeWorktreeId,
     agentSendTargetWorktreeId,
     collapsedGroups,
     groupBy,

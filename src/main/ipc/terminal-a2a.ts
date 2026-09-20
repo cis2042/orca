@@ -9,8 +9,16 @@ export function broadcastA2ALink(
 ): void {
   const windows = options?.getWindows ? options.getWindows() : BrowserWindow.getAllWindows()
   for (const window of windows) {
-    if (!window.isDestroyed()) {
-      window.webContents.send(TERMINAL_A2A_LINK_CHANNEL, event)
+    const webContentsDestroyed =
+      typeof window.webContents?.isDestroyed === 'function'
+        ? window.webContents.isDestroyed()
+        : false
+    if (!window.isDestroyed() && !webContentsDestroyed) {
+      try {
+        window.webContents.send(TERMINAL_A2A_LINK_CHANNEL, event)
+      } catch {
+        // Prevent Object has been destroyed crash on racing window destruction
+      }
     }
   }
 }
