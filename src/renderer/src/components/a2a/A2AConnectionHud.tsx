@@ -79,32 +79,79 @@ export function A2AConnectionHud({
           <A2ATelemetrySummary telemetry={telemetry} compact />
 
           {/* Quick Demo Triggers */}
-          <div className="my-2 flex items-center gap-1.5">
-            <span className="text-[10px] text-muted-foreground">測試連線:</span>
-            <button
-              type="button"
-              onClick={() => onTestTrigger('@2', '@5', 'npm test')}
-              className="flex items-center gap-1 rounded border border-a2a-source/30 bg-a2a-source/10 px-2 py-0.5 text-[10px] font-mono text-a2a-source transition-colors hover:bg-a2a-source/20"
-            >
-              #2 ➔ #5
-            </button>
-            <button
-              type="button"
-              onClick={() => onTestTrigger('@2', '@8', 'review ready')}
-              className="flex items-center gap-1 rounded border border-a2a-flow/30 bg-a2a-flow/10 px-2 py-0.5 text-[10px] font-mono text-a2a-flow transition-colors hover:bg-a2a-flow/20"
-            >
-              #2 ➔ #8
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                onTestTrigger('@2', '@5', 'task: build')
-                setTimeout(() => onTestTrigger('@2', '@8', 'task: test'), 200)
-              }}
-              className="flex items-center gap-1 rounded border border-a2a-target/30 bg-a2a-target/10 px-2 py-0.5 text-[10px] font-mono text-a2a-target transition-colors hover:bg-a2a-target/20"
-            >
-              分派 2➔5,8
-            </button>
+          <div className="my-2 flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-muted-foreground shrink-0">測試連線:</span>
+              <button
+                type="button"
+                onClick={() => onTestTrigger('@2', '@5', 'npm test')}
+                className="flex items-center gap-1 rounded border border-a2a-source/30 bg-a2a-source/10 px-2 py-0.5 text-[10px] font-mono text-a2a-source transition-colors hover:bg-a2a-source/20"
+              >
+                #2 ➔ #5
+              </button>
+              <button
+                type="button"
+                onClick={() => onTestTrigger('@2', '@8', 'review ready')}
+                className="flex items-center gap-1 rounded border border-a2a-flow/30 bg-a2a-flow/10 px-2 py-0.5 text-[10px] font-mono text-a2a-flow transition-colors hover:bg-a2a-flow/20"
+              >
+                #2 ➔ #8
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onTestTrigger('@2', '@5', 'task: build')
+                  setTimeout(() => onTestTrigger('@2', '@8', 'task: test'), 200)
+                }}
+                className="flex items-center gap-1 rounded border border-a2a-target/30 bg-a2a-target/10 px-2 py-0.5 text-[10px] font-mono text-a2a-target transition-colors hover:bg-a2a-target/20"
+              >
+                分派 2➔5,8
+              </button>
+            </div>
+
+            {/* 5-Color Motif Showcase */}
+            <div className="flex items-center gap-1 pt-1 border-t border-a2a-flow/10">
+              <span className="text-[9px] text-muted-foreground shrink-0">五色光束:</span>
+              <button
+                type="button"
+                onClick={() => onTestTrigger('@2', '@5', 'motif:flame 烈焰光束 🔥')}
+                title="烈焰光束 (Flame)"
+                className="rounded border border-[#ff6b00]/40 bg-[#ff6b00]/15 px-1.5 py-0.5 text-[10px] font-medium text-[#ff6b00] hover:bg-[#ff6b00]/25 transition-colors"
+              >
+                🔥 烈焰
+              </button>
+              <button
+                type="button"
+                onClick={() => onTestTrigger('@2', '@5', 'motif:foliage 綠葉藤蔓 🌿')}
+                title="綠葉藤蔓 (Foliage)"
+                className="rounded border border-[#72ff5a]/40 bg-[#72ff5a]/15 px-1.5 py-0.5 text-[10px] font-medium text-[#72ff5a] hover:bg-[#72ff5a]/25 transition-colors"
+              >
+                🌿 藤蔓
+              </button>
+              <button
+                type="button"
+                onClick={() => onTestTrigger('@2', '@5', 'motif:chain 金屬鎖鏈 ⛓️')}
+                title="金屬鎖鏈 (Chain)"
+                className="rounded border border-[#c7d2fe]/40 bg-[#c7d2fe]/15 px-1.5 py-0.5 text-[10px] font-medium text-[#c7d2fe] hover:bg-[#c7d2fe]/25 transition-colors"
+              >
+                ⛓️ 鎖鏈
+              </button>
+              <button
+                type="button"
+                onClick={() => onTestTrigger('@2', '@5', 'motif:water 冰藍流水 💧')}
+                title="冰藍流水 (Water)"
+                className="rounded border border-[#38bdf8]/40 bg-[#38bdf8]/15 px-1.5 py-0.5 text-[10px] font-medium text-[#38bdf8] hover:bg-[#38bdf8]/25 transition-colors"
+              >
+                💧 流水
+              </button>
+              <button
+                type="button"
+                onClick={() => onTestTrigger('@2', '@5', 'motif:tornado 洋紅旋風 🌪️')}
+                title="洋紅旋風 (Tornado)"
+                className="rounded border border-[#d946ef]/40 bg-[#d946ef]/15 px-1.5 py-0.5 text-[10px] font-medium text-[#d946ef] hover:bg-[#d946ef]/25 transition-colors"
+              >
+                🌪️ 旋風
+              </button>
+            </div>
           </div>
 
           {/* Recent Trace History List */}

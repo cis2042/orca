@@ -141,6 +141,52 @@ describe('A2AConnectionOverlay', () => {
     expect(container.querySelector('.a2a-direction-carrier')).toBeDefined()
     expect(container.querySelector('[class*="a2a-connection-effects-"]')).toBeDefined()
 
+    // Motif gradient and stroke mapping verification
+    const beamGroup = container.querySelector('.a2a-link-beam')
+    expect(beamGroup?.getAttribute('class')).toMatch(
+      /a2a-link-beam-(flame|foliage|chain|water|tornado)/
+    )
+    const beamFlow = container.querySelector('.a2a-link-beam-flow')
+    expect(beamFlow?.getAttribute('stroke')).toMatch(
+      /url\(#a2a-beam-gradient-(flame|foliage|chain|water|tornado)\)/
+    )
+
+    fixtureElements.forEach((element) => document.body.removeChild(element))
+  })
+
+  it('correctly maps explicit motif tag to theme colors and gradients', () => {
+    const fixtureElements = [
+      ...appendTerminalFixture(
+        2,
+        'motif-flame-tab-2',
+        { left: 100, top: 20, width: 80, height: 30 },
+        { left: 100, top: 100, width: 300, height: 180 }
+      ),
+      ...appendTerminalFixture(
+        5,
+        'motif-flame-tab-5',
+        { left: 400, top: 20, width: 80, height: 30 },
+        { left: 800, top: 100, width: 300, height: 180 }
+      )
+    ]
+
+    act(() => {
+      useA2AStore.getState().addTrace({
+        id: 'flame-proof',
+        from: '@2',
+        to: '@5',
+        type: 'send',
+        text: 'motif:flame 烈焰測試'
+      })
+    })
+
+    const { container } = render(<A2AConnectionOverlay />)
+    const beamGroup = container.querySelector('.a2a-link-beam')
+    expect(beamGroup?.getAttribute('class')).toContain('a2a-link-beam-flame')
+    const beamFlow = container.querySelector('.a2a-link-beam-flow')
+    expect(beamFlow?.getAttribute('stroke')).toBe('url(#a2a-beam-gradient-flame)')
+    expect(beamFlow?.getAttribute('marker-end')).toBe('url(#a2a-arrow-flame)')
+
     fixtureElements.forEach((element) => document.body.removeChild(element))
   })
 

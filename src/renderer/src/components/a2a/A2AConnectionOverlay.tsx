@@ -3,7 +3,7 @@ import { X, Send, MessageSquare } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useA2AStore } from '../../store/a2a-traces-store'
 import { A2AConnectionHud } from './A2AConnectionHud'
-import { A2AConnectionEffects } from './A2AConnectionEffects'
+import { A2AConnectionEffects, MOTIF_PALETTES } from './A2AConnectionEffects'
 import { resolveLinkGeometries, type ResolvedLinkGeometry, type Point } from './a2a-geometry'
 
 export function A2AConnectionOverlay(): React.JSX.Element | null {
@@ -65,11 +65,26 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
           }}
         >
           <defs>
+            {/* Default beam gradient */}
             <linearGradient id="a2a-beam-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="var(--a2a-source)" stopOpacity="0.95" />
               <stop offset="40%" stopColor="var(--a2a-flow)" stopOpacity="1" />
               <stop offset="100%" stopColor="var(--a2a-target)" stopOpacity="0.95" />
             </linearGradient>
+
+            {/* 5 Distinct Motifs Colored Gradients */}
+            {(
+              Object.entries(MOTIF_PALETTES) as [
+                string,
+                (typeof MOTIF_PALETTES)[keyof typeof MOTIF_PALETTES]
+              ][]
+            ).map(([key, palette]) => (
+              <linearGradient key={key} id={palette.gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor={palette.sourceColor} stopOpacity="0.95" />
+                <stop offset="50%" stopColor={palette.flowColor} stopOpacity="1" />
+                <stop offset="100%" stopColor={palette.targetColor} stopOpacity="0.95" />
+              </linearGradient>
+            ))}
 
             <filter id="a2a-glow" x="-20%" y="-20%" width="140%" height="140%">
               <feGaussianBlur stdDeviation="4" result="blur" />
@@ -90,121 +105,158 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
             >
               <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="var(--a2a-target)" />
             </marker>
+
+            {/* 5 Motif-specific Arrow Heads */}
+            {(
+              Object.entries(MOTIF_PALETTES) as [
+                string,
+                (typeof MOTIF_PALETTES)[keyof typeof MOTIF_PALETTES]
+              ][]
+            ).map(([key, palette]) => (
+              <marker
+                key={`marker-${key}`}
+                id={palette.markerId}
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="8"
+                markerHeight="8"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill={palette.targetColor} />
+              </marker>
+            ))}
           </defs>
 
           {geometries
             .filter((g): g is ResolvedLinkGeometry & { p1: Point; p2: Point } =>
               Boolean(g.pathD && g.p1 && g.p2)
             )
-            .map(({ link, p1, p2, pathD, motif }) => (
-              <g
-                key={link.id}
-                className="a2a-link-beam"
-                role="group"
-                aria-label={`#${link.fromIndex ?? link.from} → #${link.toIndex ?? link.to}`}
-              >
-                {/* Outer soft glow line */}
-                <path
-                  d={pathD}
-                  fill="none"
-                  stroke="url(#a2a-beam-gradient)"
-                  strokeWidth="14"
-                  strokeOpacity="0.28"
-                  strokeLinecap="round"
-                  filter="url(#a2a-glow)"
-                />
-
-                {/* Foreground animated dashed line */}
-                <path
-                  d={pathD}
-                  fill="none"
-                  className="a2a-link-beam-flow"
-                  stroke="url(#a2a-beam-gradient)"
-                  strokeWidth="4.5"
-                  strokeDasharray="18 8"
-                  markerEnd="url(#a2a-arrow-head)"
-                />
-
-                <path
-                  d={pathD}
-                  fill="none"
-                  className="a2a-link-beam-flow-core"
-                  stroke="var(--a2a-flow-soft)"
-                  strokeWidth="1.4"
-                  strokeDasharray="3 11"
-                  markerEnd="url(#a2a-arrow-head)"
-                />
-
-                <A2AConnectionEffects pathD={pathD} motif={motif} />
-
-                {/* Origin (#from) glowing ring and radar ping */}
-                <circle
-                  className="a2a-link-beam-pulse"
-                  cx={p1.x}
-                  cy={p1.y}
-                  r="14"
-                  fill="none"
-                  stroke="var(--a2a-source)"
-                  strokeWidth="1.5"
+            .map(({ link, p1, p2, pathD, motif }) => {
+              const palette = MOTIF_PALETTES[motif] || MOTIF_PALETTES.flame
+              return (
+                <g
+                  key={link.id}
+                  className={`a2a-link-beam a2a-link-beam-${motif}`}
+                  role="group"
+                  aria-label={`#${link.fromIndex ?? link.from} → #${link.toIndex ?? link.to} (${palette.label})`}
                 >
-                  <animate attributeName="r" from="4" to="20" dur="1.8s" repeatCount="indefinite" />
-                  <animate
-                    attributeName="opacity"
-                    from="0.9"
-                    to="0"
-                    dur="1.8s"
-                    repeatCount="indefinite"
+                  {/* Outer soft glow line */}
+                  <path
+                    d={pathD}
+                    fill="none"
+                    stroke={`url(#${palette.gradientId})`}
+                    strokeWidth="15"
+                    strokeOpacity="0.32"
+                    strokeLinecap="round"
+                    filter="url(#a2a-glow)"
                   />
-                </circle>
-                <circle
-                  cx={p1.x}
-                  cy={p1.y}
-                  r="5"
-                  fill="var(--a2a-source)"
-                  stroke="var(--foreground)"
-                  strokeWidth="1.5"
-                />
 
-                {/* Target (#to) receiving pulse rings */}
-                <circle
-                  className="a2a-link-beam-pulse"
-                  cx={p2.x}
-                  cy={p2.y}
-                  r="16"
-                  fill="none"
-                  stroke="var(--a2a-target)"
-                  strokeWidth="1.5"
-                >
-                  <animate attributeName="r" from="6" to="24" dur="1.8s" repeatCount="indefinite" />
-                  <animate
-                    attributeName="opacity"
-                    from="0.9"
-                    to="0"
-                    dur="1.8s"
-                    repeatCount="indefinite"
+                  {/* Foreground animated dashed line */}
+                  <path
+                    d={pathD}
+                    fill="none"
+                    className="a2a-link-beam-flow"
+                    stroke={`url(#${palette.gradientId})`}
+                    strokeWidth="4.5"
+                    strokeDasharray="18 8"
+                    markerEnd={`url(#${palette.markerId})`}
                   />
-                </circle>
-                <circle
-                  cx={p2.x}
-                  cy={p2.y}
-                  r="6"
-                  fill="var(--a2a-target)"
-                  stroke="var(--foreground)"
-                  strokeWidth="1.5"
-                />
 
-                {/* Traveling light particle / energy packet */}
-                <circle
-                  className="a2a-link-beam-pulse"
-                  r="4.5"
-                  fill="var(--foreground)"
-                  stroke="var(--a2a-flow)"
-                  strokeWidth="2"
-                >
-                  <animateMotion path={pathD} dur="1.4s" repeatCount="indefinite" />
-                </circle>
-              </g>
-            ))}
+                  {/* Core energy line */}
+                  <path
+                    d={pathD}
+                    fill="none"
+                    className="a2a-link-beam-flow-core"
+                    stroke={palette.coreColor}
+                    strokeWidth="1.6"
+                    strokeDasharray="3 11"
+                    markerEnd={`url(#${palette.markerId})`}
+                  />
+
+                  <A2AConnectionEffects pathD={pathD} motif={motif} />
+
+                  {/* Origin (#from) glowing ring and radar ping in source theme color */}
+                  <circle
+                    className="a2a-link-beam-pulse"
+                    cx={p1.x}
+                    cy={p1.y}
+                    r="14"
+                    fill="none"
+                    stroke={palette.sourceColor}
+                    strokeWidth="1.5"
+                  >
+                    <animate
+                      attributeName="r"
+                      from="4"
+                      to="20"
+                      dur="1.8s"
+                      repeatCount="indefinite"
+                    />
+                    <animate
+                      attributeName="opacity"
+                      from="0.9"
+                      to="0"
+                      dur="1.8s"
+                      repeatCount="indefinite"
+                    />
+                  </circle>
+                  <circle
+                    cx={p1.x}
+                    cy={p1.y}
+                    r="5"
+                    fill={palette.sourceColor}
+                    stroke="var(--foreground)"
+                    strokeWidth="1.5"
+                  />
+
+                  {/* Target (#to) receiving pulse rings in target theme color */}
+                  <circle
+                    className="a2a-link-beam-pulse"
+                    cx={p2.x}
+                    cy={p2.y}
+                    r="16"
+                    fill="none"
+                    stroke={palette.targetColor}
+                    strokeWidth="1.5"
+                  >
+                    <animate
+                      attributeName="r"
+                      from="6"
+                      to="24"
+                      dur="1.8s"
+                      repeatCount="indefinite"
+                    />
+                    <animate
+                      attributeName="opacity"
+                      from="0.9"
+                      to="0"
+                      dur="1.8s"
+                      repeatCount="indefinite"
+                    />
+                  </circle>
+                  <circle
+                    cx={p2.x}
+                    cy={p2.y}
+                    r="6"
+                    fill={palette.targetColor}
+                    stroke="var(--foreground)"
+                    strokeWidth="1.5"
+                  />
+
+                  {/* Traveling light particle / energy packet in flow theme color */}
+                  <circle
+                    className="a2a-link-beam-pulse"
+                    r="4.5"
+                    fill="var(--foreground)"
+                    stroke={palette.flowColor}
+                    strokeWidth="2"
+                  >
+                    <animateMotion path={pathD} dur="1.4s" repeatCount="indefinite" />
+                  </circle>
+                </g>
+              )
+            })}
         </svg>
       )}
 

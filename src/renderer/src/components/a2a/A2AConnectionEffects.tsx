@@ -3,17 +3,89 @@ import type { A2ALinkEvent } from '../../../../shared/terminal-a2a-link'
 
 export type A2AConnectionMotif = 'flame' | 'foliage' | 'chain' | 'water' | 'tornado'
 
+export type MotifPalette = {
+  label: string
+  icon: string
+  sourceColor: string
+  targetColor: string
+  flowColor: string
+  coreColor: string
+  gradientId: string
+  markerId: string
+}
+
+export const MOTIF_PALETTES: Record<A2AConnectionMotif, MotifPalette> = {
+  flame: {
+    label: '烈焰',
+    icon: '🔥',
+    sourceColor: 'var(--a2a-flame, #ff6b00)',
+    targetColor: 'var(--a2a-flame-core, #ffe600)',
+    flowColor: 'var(--a2a-flame, #ff6b00)',
+    coreColor: 'var(--a2a-flame-core, #ffe600)',
+    gradientId: 'a2a-beam-gradient-flame',
+    markerId: 'a2a-arrow-flame'
+  },
+  foliage: {
+    label: '綠葉藤蔓',
+    icon: '🌿',
+    sourceColor: 'var(--a2a-leaf, #72ff5a)',
+    targetColor: 'var(--a2a-leaf-soft, #d5ff76)',
+    flowColor: 'var(--a2a-leaf, #72ff5a)',
+    coreColor: 'var(--a2a-leaf-soft, #d5ff76)',
+    gradientId: 'a2a-beam-gradient-foliage',
+    markerId: 'a2a-arrow-foliage'
+  },
+  chain: {
+    label: '金屬鎖鏈',
+    icon: '⛓️',
+    sourceColor: 'var(--a2a-chain, #c7d2fe)',
+    targetColor: 'var(--a2a-chain-hot, #f0abfc)',
+    flowColor: 'var(--a2a-chain, #c7d2fe)',
+    coreColor: 'var(--a2a-chain-hot, #f0abfc)',
+    gradientId: 'a2a-beam-gradient-chain',
+    markerId: 'a2a-arrow-chain'
+  },
+  water: {
+    label: '冰藍流水',
+    icon: '💧',
+    sourceColor: 'var(--a2a-water, #38bdf8)',
+    targetColor: 'var(--a2a-water-hot, #a5f3fc)',
+    flowColor: 'var(--a2a-water, #38bdf8)',
+    coreColor: 'var(--a2a-water-hot, #a5f3fc)',
+    gradientId: 'a2a-beam-gradient-water',
+    markerId: 'a2a-arrow-water'
+  },
+  tornado: {
+    label: '洋紅旋風',
+    icon: '🌪️',
+    sourceColor: 'var(--a2a-tornado, #d946ef)',
+    targetColor: 'var(--a2a-flow, #00e5ff)',
+    flowColor: 'var(--a2a-tornado, #d946ef)',
+    coreColor: 'var(--a2a-flow-soft, #a5f3fc)',
+    gradientId: 'a2a-beam-gradient-tornado',
+    markerId: 'a2a-arrow-tornado'
+  }
+}
+
 type A2AConnectionEffectsProps = {
   pathD: string
   motif: A2AConnectionMotif
   compact?: boolean
 }
 
-const MOTIFS: A2AConnectionMotif[] = ['flame', 'foliage', 'chain', 'water', 'tornado']
+export const MOTIFS: A2AConnectionMotif[] = ['flame', 'foliage', 'chain', 'water', 'tornado']
 
 export function getA2AConnectionMotif(
   link: Pick<A2ALinkEvent, 'id' | 'from' | 'to' | 'type'>
 ): A2AConnectionMotif {
+  // Allow explicit motif in text (e.g. "motif:flame" or "motif:water") for testing & showcase
+  if (link && 'text' in link && typeof (link as { text?: string }).text === 'string') {
+    const text = (link as { text?: string }).text || ''
+    const match = text.match(/motif:([a-z]+)/i)
+    if (match && MOTIFS.includes(match[1].toLowerCase() as A2AConnectionMotif)) {
+      return match[1].toLowerCase() as A2AConnectionMotif
+    }
+  }
   const key = `${link.id}:${link.from}:${link.to}:${link.type}`
   let hash = 0
   for (const character of key) {
