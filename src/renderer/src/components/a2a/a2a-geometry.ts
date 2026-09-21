@@ -67,18 +67,33 @@ export function findTerminalElement(targetIndex?: number, targetName?: string): 
       if (!cleanTargetName) {
         return false
       }
+      if (/^\d+$/.test(cleanTargetName) && el.dataset.terminalIndex === cleanTargetName) {
+        return true
+      }
       const title = el.dataset.tabTitle?.trim().replace(/^[@#]/, '')
       return title === cleanTargetName || title?.toLowerCase() === cleanTargetName.toLowerCase()
     }
 
+    let fallbackTab: HTMLElement | null = null
+
     for (const tabRoot of tabRoots) {
-      if (!matchesTarget(tabRoot) || !tabRoot.dataset.tabId) {
+      if (!matchesTarget(tabRoot)) {
+        continue
+      }
+      if (!fallbackTab && hasUsableTerminalBounds(tabRoot)) {
+        fallbackTab = tabRoot
+      }
+      if (!tabRoot.dataset.tabId) {
         continue
       }
       const pane = findTerminalPane(tabRoot.dataset.tabId)
       if (pane) {
         return pane
       }
+    }
+
+    if (fallbackTab) {
+      return fallbackTab
     }
   } catch {
     return null

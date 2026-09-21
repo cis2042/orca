@@ -38,9 +38,38 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
 
   const handleTestTrigger = useCallback(
     (from: string, to: string, text: string) => {
+      let resolvedFrom = from
+      let resolvedTo = to
+
+      if (typeof document !== 'undefined') {
+        const activeIndices: number[] = []
+        document.querySelectorAll<HTMLElement>('[data-terminal-index]').forEach((el) => {
+          const val = Number.parseInt(el.dataset.terminalIndex || '', 10)
+          if (!Number.isNaN(val) && !activeIndices.includes(val)) {
+            activeIndices.push(val)
+          }
+        })
+
+        // If target from or to doesn't exist in DOM, dynamically anchor to currently visible terminal(s)
+        const fromIdx = Number.parseInt(from.replace(/^[@#]/, ''), 10)
+        const toIdx = Number.parseInt(to.replace(/^[@#]/, ''), 10)
+
+        const fromExists = Number.isFinite(fromIdx) && activeIndices.includes(fromIdx)
+        const toExists = Number.isFinite(toIdx) && activeIndices.includes(toIdx)
+
+        if (activeIndices.length > 0) {
+          if (!fromExists) {
+            resolvedFrom = `@${activeIndices[0]}`
+          }
+          if (!toExists) {
+            resolvedTo = activeIndices.length > 1 ? `@${activeIndices[1]}` : resolvedFrom
+          }
+        }
+      }
+
       addTrace({
-        from,
-        to,
+        from: resolvedFrom,
+        to: resolvedTo,
         type: 'send',
         text,
         durationMs: 5000
