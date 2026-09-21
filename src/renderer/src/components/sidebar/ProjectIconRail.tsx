@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { ChevronsLeft, Folder, PanelLeftOpen, Settings } from 'lucide-react'
+import { Folder, PanelLeftOpen, Settings } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { useAllWorktrees } from '@/store/selectors'
 import { useWorktreeActivityStatuses } from './use-worktree-activity-statuses'
@@ -175,7 +175,6 @@ export function ProjectIconRail(): React.JSX.Element {
   const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
   const setActiveWorktree = useAppStore((s) => s.setActiveWorktree)
   const setSidebarOpen = useAppStore((s) => s.setSidebarOpen)
-  const setSidebarCollapseMode = useAppStore((s) => s.setSidebarCollapseMode)
   const openSettingsPage = useAppStore((s) => s.openSettingsPage)
 
   const allWorktreeIds = useMemo(() => allWorktrees.map((w) => w.id), [allWorktrees])
@@ -274,32 +273,9 @@ export function ProjectIconRail(): React.JSX.Element {
         ))}
       </div>
 
-      {/* Bottom Footer: Full Collapse & Settings Buttons */}
+      {/* Bottom Footer: Settings Button */}
       <div className="flex flex-col items-center gap-1 pt-1">
         <div className="h-px w-6 bg-worktree-sidebar-border" />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => setSidebarCollapseMode('hidden')}
-              aria-label={translate(
-                'auto.components.sidebar.ProjectIconRail.hideCompletely',
-                'Hide sidebar completely'
-              )}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <ChevronsLeft className="size-3.5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={12}>
-            {translate(
-              'auto.components.sidebar.ProjectIconRail.hideCompletely',
-              'Hide sidebar completely'
-            )}
-          </TooltipContent>
-        </Tooltip>
-
         <Tooltip>
           <TooltipTrigger asChild>
             <Button

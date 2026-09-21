@@ -13,7 +13,6 @@ const mocks = vi.hoisted(() => ({
   state: {} as Record<string, unknown>,
   setActiveWorktree: vi.fn(),
   setSidebarOpen: vi.fn(),
-  setSidebarCollapseMode: vi.fn(),
   openSettingsPage: vi.fn(),
   allWorktrees: [] as Worktree[],
   statuses: new Map<string, WorktreeStatus>()
@@ -170,7 +169,6 @@ describe('ProjectIconRail UI', () => {
 
     mocks.setActiveWorktree.mockClear()
     mocks.setSidebarOpen.mockClear()
-    mocks.setSidebarCollapseMode.mockClear()
     mocks.openSettingsPage.mockClear()
 
     mocks.allWorktrees = worktrees
@@ -185,7 +183,6 @@ describe('ProjectIconRail UI', () => {
       activeWorktreeId: 'wt-3',
       setActiveWorktree: mocks.setActiveWorktree,
       setSidebarOpen: mocks.setSidebarOpen,
-      setSidebarCollapseMode: mocks.setSidebarCollapseMode,
       openSettingsPage: mocks.openSettingsPage
     }
   })
@@ -245,7 +242,7 @@ describe('ProjectIconRail UI', () => {
     expect(mocks.setSidebarOpen).toHaveBeenCalledWith(true)
   })
 
-  it('sets collapse mode to hidden when the hide completely button is clicked', () => {
+  it('does not render the accidental full-hide button', () => {
     act(() => {
       root?.render(
         <TooltipProvider delayDuration={0}>
@@ -257,13 +254,7 @@ describe('ProjectIconRail UI', () => {
     const hideBtn = container?.querySelector(
       'button[aria-label="Hide sidebar completely"]'
     ) as HTMLButtonElement | null
-    expect(hideBtn).not.toBeNull()
-
-    act(() => {
-      hideBtn?.click()
-    })
-
-    expect(mocks.setSidebarCollapseMode).toHaveBeenCalledWith('hidden')
+    expect(hideBtn).toBeNull()
   })
 
   it('activates target worktree when clicking a non-active project', () => {
