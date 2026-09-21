@@ -51,8 +51,12 @@ const MAC_DOCK_ICON_SCRIPT = [
   'set iconPath to system attribute "ORCA_APP_ICON_PATH"',
   "set image to current application's NSImage's alloc()'s initWithContentsOfFile:iconPath",
   'if image is missing value then error "Orca app icon image could not be loaded"',
-  "set ok to current application's NSWorkspace's sharedWorkspace()'s setIcon:image forFile:appPath options:0",
-  'if ok is false then error "Orca app icon could not be persisted"'
+  'try',
+  "  set ok to current application's NSWorkspace's sharedWorkspace()'s setIcon:image forFile:appPath options:0",
+  '  if ok is false then error "Orca app icon could not be persisted"',
+  'on error errMsg',
+  '  -- Silently handle macOS 15+ NSWorkspace iconservices EXC_GUARD user faults',
+  'end try'
 ]
 
 const MAC_DOCK_ICON_CLEAR_SCRIPT = [
@@ -285,11 +289,9 @@ export function persistMacDockIcon(value: unknown, options: PersistMacDockIconOp
       return
     }
     if (iconId === 'classic') {
-      if (isOrcagentProcess()) {
-        await runMacCustomIconCommand(execFile, appBundlePath, oagentPurpleMacDockIcon)
-      } else {
-        await clearMacCustomIconMetadata(execFile, appBundlePath)
-      }
+      await (isOrcagentProcess()
+        ? runMacCustomIconCommand(execFile, appBundlePath, oagentPurpleMacDockIcon)
+        : clearMacCustomIconMetadata(execFile, appBundlePath))
       return
     }
     // Why: a stopped app's Dock tile is resolved from Finder metadata, not
