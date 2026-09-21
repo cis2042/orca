@@ -94,6 +94,7 @@ const OnboardingFlow = lazy(() => import('../components/onboarding/OnboardingFlo
 type BoundaryProps = {
   boundaryId: string
   resetKey?: string | number | boolean | null
+  reportAsCrash?: boolean
   title?: string
   description?: string
   children: React.ReactNode
@@ -314,9 +315,15 @@ export function AppRootSurfaces(props: {
       <OverlayBoundary boundaryId="overlay.zoom" resetKey={activeView}>
         <ZoomOverlay />
       </OverlayBoundary>
-      <A2AConnectionOverlay />
-      <A2ADispatchHub />
-      <BacklogAgentDialog />
+      <OverlayBoundary boundaryId="overlay.a2a-connection" reportAsCrash={false}>
+        <A2AConnectionOverlay />
+      </OverlayBoundary>
+      <OverlayBoundary boundaryId="overlay.a2a-dispatch-hub" reportAsCrash={false}>
+        <A2ADispatchHub />
+      </OverlayBoundary>
+      <ModalBoundary boundaryId="modal.backlog-agent" reportAsCrash={false}>
+        <BacklogAgentDialog />
+      </ModalBoundary>
       <Suspense fallback={null}>
         {activeModal === 'delete-worktree' ? (
           <ModalBoundary boundaryId="modal.delete-worktree" resetKey>

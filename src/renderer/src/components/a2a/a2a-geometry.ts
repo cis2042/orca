@@ -158,9 +158,14 @@ export function resolveLinkGeometries(activeLinks: A2ALinkEvent[]): ResolvedLink
       midY = Math.max(p1.y, p2.y) + arcDepth
       pathD = `M ${p1.x} ${p1.y} Q ${midX} ${midY} ${p2.x} ${p2.y}`
     } else {
-      // Multi-level curve (e.g. tab to split pane or pane to pane)
-      const controlXOffset = (p2.x - p1.x) * 0.5
-      pathD = `M ${p1.x} ${p1.y} C ${p1.x + controlXOffset} ${p1.y}, ${p2.x - controlXOffset} ${p2.y}, ${p2.x} ${p2.y}`
+      // Multi-level curve (e.g. tab to split pane, pane to pane, or vertical split)
+      const baseControlX = (p2.x - p1.x) * 0.5
+      // If horizontally very close (e.g. top/bottom panes), bow outwards slightly so it's a visible dynamic arc rather than a collapsed line
+      const bowX = dx < 40 ? 50 : 0
+      const c1x = p1.x + baseControlX + bowX
+      const c2x = p2.x - baseControlX + bowX
+      midX = (c1x + c2x) / 2
+      pathD = `M ${p1.x} ${p1.y} C ${c1x} ${p1.y}, ${c2x} ${p2.y}, ${p2.x} ${p2.y}`
     }
 
     return {

@@ -44,16 +44,18 @@ type PersistMacDockIconOptions = {
   platform?: NodeJS.Platform
 }
 
+// macOS 15+ has an internal iconservices bug where NSWorkspace.setIcon:forFile:
+// triggers an EXC_GUARD / SIGKILL in osascript. If ORCA_DISABLE_DOCK_ICON_PERSIST
+// is set or if running in an automated environment, skip calling osascript directly.
 const MAC_DOCK_ICON_SCRIPT = [
   'use framework "AppKit"',
   'use scripting additions',
   'set appPath to system attribute "ORCA_APP_BUNDLE_PATH"',
   'set iconPath to system attribute "ORCA_APP_ICON_PATH"',
   "set image to current application's NSImage's alloc()'s initWithContentsOfFile:iconPath",
-  'if image is missing value then error "Orca app icon image could not be loaded"',
+  'if image is missing value then return',
   'try',
-  "  set ok to current application's NSWorkspace's sharedWorkspace()'s setIcon:image forFile:appPath options:0",
-  '  if ok is false then error "Orca app icon could not be persisted"',
+  "  current application's NSWorkspace's sharedWorkspace()'s setIcon:image forFile:appPath options:0",
   'on error errMsg',
   '  -- Silently handle macOS 15+ NSWorkspace iconservices EXC_GUARD user faults',
   'end try'
