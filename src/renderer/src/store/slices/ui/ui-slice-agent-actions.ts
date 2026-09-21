@@ -61,7 +61,21 @@ export function createUiAgentActions(
     sidebarOpen: true,
     sidebarWidth: 280,
     sidebarCollapseMode: getInitialSidebarCollapseMode(),
-    toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+    toggleSidebar: () =>
+      set((s) => {
+        if (s.sidebarOpen) {
+          if (s.sidebarCollapseMode === 'hidden') {
+            try {
+              window.localStorage.setItem(SIDEBAR_COLLAPSE_MODE_STORAGE_KEY, 'rail')
+            } catch {
+              // ignore
+            }
+            return { sidebarOpen: false, sidebarCollapseMode: 'rail' }
+          }
+          return { sidebarOpen: false }
+        }
+        return { sidebarOpen: true }
+      }),
     setSidebarOpen: (open) => set({ sidebarOpen: open }),
     setSidebarWidth: (width) => set({ sidebarWidth: width }),
     setSidebarCollapseMode: (mode) => {
