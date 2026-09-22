@@ -32,30 +32,30 @@ export const BRIDGE_COMMAND_SPECS: CommandSpec[] = [
   {
     path: ['bridge', 'type'],
     summary: 'Type text into a target terminal without pressing Enter',
-    usage: 'orca bridge type <target> <text> [--no-read-guard] [--force] [--json]',
-    allowedFlags: [...GLOBAL_FLAGS, 'target', 'text', 'no-read-guard', 'force'],
+    usage: 'orca bridge type <target> <text> [--no-read-guard] [--force] [--reaim] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'target', 'text', 'no-read-guard', 'force', 'reaim'],
     positionalArgs: ['target', 'text']
   },
   {
     path: ['bridge', 'send'],
     summary: 'Send text into a target terminal and press Enter',
-    usage: 'orca bridge send <target> <text> [--no-read-guard] [--force] [--json]',
-    allowedFlags: [...GLOBAL_FLAGS, 'target', 'text', 'no-read-guard', 'force'],
+    usage: 'orca bridge send <target> <text> [--no-read-guard] [--force] [--reaim] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'target', 'text', 'no-read-guard', 'force', 'reaim'],
     positionalArgs: ['target', 'text']
   },
   {
     path: ['bridge', 'message'],
     aliases: [['bridge', 'msg']],
     summary: 'Send a formatted message with sender header to a target terminal',
-    usage: 'orca bridge message <target> <message> [--no-read-guard] [--force] [--json]',
-    allowedFlags: [...GLOBAL_FLAGS, 'target', 'message', 'no-read-guard', 'force'],
+    usage: 'orca bridge message <target> <message> [--no-read-guard] [--force] [--reaim] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'target', 'message', 'no-read-guard', 'force', 'reaim'],
     positionalArgs: ['target', 'message']
   },
   {
     path: ['bridge', 'keys'],
     summary: 'Send special keys to a target terminal (Enter, Escape, C-c, etc.)',
-    usage: 'orca bridge keys <target> <key>... [--no-read-guard] [--force] [--json]',
-    allowedFlags: [...GLOBAL_FLAGS, 'target', 'no-read-guard', 'force'],
+    usage: 'orca bridge keys <target> <key>... [--no-read-guard] [--force] [--reaim] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'target', 'no-read-guard', 'force', 'reaim'],
     positionalArgs: ['target', 'key']
   },
   {

@@ -129,7 +129,14 @@ export const TerminalSend = TerminalHandle.extend({
       rows: z.number().int().min(1).max(500)
     })
     .optional(),
-  claimViewport: z.literal(true).optional()
+  claimViewport: z.literal(true).optional(),
+  // Why: older hosts strip this. When present, the write is refused if that pane's session moved.
+  expectedAgentSession: z
+    .object({
+      sessionId: z.string().min(1).max(512).nullable(),
+      runtimeFence: z.number().int().nonnegative().nullable()
+    })
+    .optional()
 })
 
 export const TerminalViewport = z.object({
@@ -256,5 +263,12 @@ export const TerminalA2ALink = z.object({
   targetHandle: OptionalString,
   bytesWritten: z.number().optional(),
   executionState: z.enum(['delivered', 'executing', 'failed', 'simulated']).optional(),
-  error: OptionalString
+  error: OptionalString,
+  // Why: older hosts strip this. A dispatch that names an aim must not follow a session switch.
+  expectedAgentSession: z
+    .object({
+      sessionId: z.string().min(1).max(512).nullable(),
+      runtimeFence: z.number().int().nonnegative().nullable()
+    })
+    .optional()
 })

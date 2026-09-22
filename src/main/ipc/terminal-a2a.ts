@@ -35,7 +35,12 @@ type RuntimeTerminalBridgeLike = {
   listTerminals: () => Promise<{ terminals?: TerminalDescriptorLike[] } | undefined>
   sendTerminal: (
     handle: string,
-    payload: { text: string; enter?: boolean; interrupt?: boolean }
+    payload: {
+      text: string
+      enter?: boolean
+      interrupt?: boolean
+      expectedAgentSession?: { sessionId: string | null; runtimeFence: number | null }
+    }
   ) => Promise<{ accepted?: boolean; bytesWritten?: number } | undefined>
 }
 
@@ -96,7 +101,10 @@ export function registerTerminalA2AHandlers(options?: {
 
           const sendRes = await runtime.sendTerminal(targetHandle, {
             text: messageToSend,
-            enter: event.type !== 'type'
+            enter: event.type !== 'type',
+            ...(event.expectedAgentSession
+              ? { expectedAgentSession: event.expectedAgentSession }
+              : {})
           })
 
           delivered = sendRes?.accepted ?? true

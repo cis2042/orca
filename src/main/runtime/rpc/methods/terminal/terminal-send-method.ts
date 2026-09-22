@@ -230,7 +230,10 @@ export const TERMINAL_SEND_METHODS = [
               {
                 text: params.text,
                 enter: params.enter === true,
-                interrupt: params.interrupt === true
+                interrupt: params.interrupt === true,
+                ...(params.expectedAgentSession
+                  ? { expectedAgentSession: params.expectedAgentSession }
+                  : {})
               },
               {
                 beforeWrite,

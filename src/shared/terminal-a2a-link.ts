@@ -1,3 +1,5 @@
+import type { AgentSessionWriteAim } from './agent-session-pty-write-admission'
+
 export type A2ALinkType = 'send' | 'message' | 'type' | 'keys'
 
 export type A2ALinkEvent = {
@@ -18,6 +20,8 @@ export type A2ALinkEvent = {
   bytesWritten?: number
   executionState?: 'delivered' | 'executing' | 'failed' | 'simulated'
   error?: string
+  /** Set when this dispatch must stay on the session it was aimed at. */
+  expectedAgentSession?: AgentSessionWriteAim
 }
 
 /**

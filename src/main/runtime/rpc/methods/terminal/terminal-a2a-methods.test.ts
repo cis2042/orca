@@ -96,6 +96,23 @@ describe('TERMINAL_A2A_METHODS', () => {
       })
     )
 
+    const aim = { sessionId: 'session-alpha-1', runtimeFence: 7 }
+    await handler(
+      {
+        from: '@1',
+        to: '@2',
+        type: 'send',
+        text: 'stay',
+        dispatch: true,
+        expectedAgentSession: aim
+      },
+      { runtime: mockRuntime }
+    )
+    expect(mockSendTerminal).toHaveBeenCalledWith(
+      'term-2',
+      expect.objectContaining({ expectedAgentSession: aim })
+    )
+
     broadcastSpy.mockRestore()
   })
 })

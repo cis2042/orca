@@ -50,7 +50,10 @@ export const TERMINAL_A2A_METHODS = [
 
             const sendRes = await ctx.runtime.sendTerminal(targetHandle, {
               text: messageToSend,
-              enter: params.type !== 'type'
+              enter: params.type !== 'type',
+              ...(params.expectedAgentSession
+                ? { expectedAgentSession: params.expectedAgentSession }
+                : {})
             })
 
             delivered = sendRes?.accepted ?? true
