@@ -1,4 +1,7 @@
-import type { AgentSessionPtyWriteRefusal } from './agent-session-pty-write-admission'
+import type {
+  AgentSessionPtyWriteRefusal,
+  AgentSessionWriteAim
+} from './agent-session-pty-write-admission'
 import type {
   AgentProviderSessionMetadata,
   SleepingAgentLaunchConfig
@@ -190,6 +193,11 @@ export type RuntimeTerminalSend = {
    * old client sees the `accepted: false` it already handles and ignores this field.
    */
   agentSessionRefusal?: AgentSessionPtyWriteRefusal
+  /**
+   * Session bound to the pane when this write was admitted. Additive: old clients ignore it.
+   * A bridge automation stores it and sends it back as `expectedAgentSession`.
+   */
+  agentSessionAim?: AgentSessionWriteAim
   prompt?: RuntimeTerminalPromptDelivery
 }
 

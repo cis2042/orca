@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   AgentSessionPtyWriteRefusedError,
+  assertExpectedAgentSessionAim,
   describeAgentSessionPtyWriteRefusal,
   evaluateAgentSessionPtyWriteAdmission,
   isAgentSessionPtyWriteRefusedError,
@@ -213,6 +214,43 @@ describe('in-flight fence race', () => {
       binding: bindingFor(agentSessionLeaseFixture({ runtimeKind: 'native' }))
     })
     expect(next.admitted).toBe(false)
+  })
+})
+
+describe('aimed session', () => {
+  const aimed = { sessionId: 'session-alpha-1', runtimeFence: 7 }
+
+  it('allows a write that names the session it was admitted under', () => {
+    expect(() => assertExpectedAgentSessionAim(aimed, aimed)).not.toThrow()
+  })
+
+  it('allows a write that does not name a session', () => {
+    expect(() => assertExpectedAgentSessionAim(aimed, undefined)).not.toThrow()
+  })
+
+  it('refuses when the pane is bound to a different session', () => {
+    expect(() =>
+      assertExpectedAgentSessionAim(aimed, { sessionId: 'session-beta-2', runtimeFence: 7 })
+    ).toThrow(AgentSessionPtyWriteRefusedError)
+  })
+
+  it('refuses when the same session fence has moved', () => {
+    try {
+      assertExpectedAgentSessionAim(aimed, { sessionId: 'session-alpha-1', runtimeFence: 8 })
+      throw new Error('expected a refusal')
+    } catch (error) {
+      expect(isAgentSessionPtyWriteRefusedError(error)).toBe(true)
+      if (!isAgentSessionPtyWriteRefusedError(error)) {
+        return
+      }
+      expect(error.refusal.code).toBe('agent_session_checkpoint_stale')
+    }
+  })
+
+  it('refuses when a session appears on a pane that was aimed unbound', () => {
+    expect(() =>
+      assertExpectedAgentSessionAim(aimed, { sessionId: null, runtimeFence: null })
+    ).toThrow(AgentSessionPtyWriteRefusedError)
   })
 })
 

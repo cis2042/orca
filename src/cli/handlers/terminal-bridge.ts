@@ -1,8 +1,7 @@
 import type {
   BrowserTabListResult,
   RuntimeTerminalListResult,
-  RuntimeTerminalRead,
-  RuntimeTerminalSend
+  RuntimeTerminalRead
 } from '../../shared/runtime-types'
 import type { CommandHandler } from '../dispatch'
 import { getOptionalPositiveIntegerFlag, getOptionalStringFlag } from '../flags'
@@ -23,6 +22,7 @@ import {
   markRead,
   requireRead
 } from './terminal-bridge-guard'
+import { sendPinnedBridgeText } from './terminal-bridge-session-pin'
 import {
   bridgeDoctorHandler,
   bridgeIdHandler,
@@ -122,22 +122,24 @@ export const bridgeTypeHandler: CommandHandler = async (ctx) => {
     return
   }
 
-  const result = await ctx.client.call<{ send: RuntimeTerminalSend }>('terminal.send', {
-    terminal: resolved.handle,
+  const resultSend = await sendPinnedBridgeText({
+    client: ctx.client,
+    target: resolved.targetDisplay,
+    handle: resolved.handle,
     text,
     enter: false,
-    client: { id: 'orca-bridge', type: 'desktop' }
+    reaim: ctx.flags.get('reaim') === true
   })
 
   clearRead(resolved.handle)
 
-  if (result.result.send.accepted) {
+  if (resultSend.accepted) {
     await emitTrace('type', text)
   }
 
   if (ctx.json) {
-    console.log(JSON.stringify(result.result.send))
-  } else if (!result.result.send.accepted) {
+    console.log(JSON.stringify(resultSend))
+  } else if (!resultSend.accepted) {
     throw new RuntimeClientError('internal_error', 'Terminal did not accept input')
   }
 }
@@ -165,22 +167,24 @@ export const bridgeSendHandler: CommandHandler = async (ctx) => {
     return
   }
 
-  const result = await ctx.client.call<{ send: RuntimeTerminalSend }>('terminal.send', {
-    terminal: resolved.handle,
+  const resultSend = await sendPinnedBridgeText({
+    client: ctx.client,
+    target: resolved.targetDisplay,
+    handle: resolved.handle,
     text,
     enter: true,
-    client: { id: 'orca-bridge', type: 'desktop' }
+    reaim: ctx.flags.get('reaim') === true
   })
 
   clearRead(resolved.handle)
 
-  if (result.result.send.accepted) {
+  if (resultSend.accepted) {
     await emitTrace('send', text)
   }
 
   if (ctx.json) {
-    console.log(JSON.stringify(result.result.send))
-  } else if (!result.result.send.accepted) {
+    console.log(JSON.stringify(resultSend))
+  } else if (!resultSend.accepted) {
     throw new RuntimeClientError('internal_error', 'Terminal did not accept input')
   }
 }
@@ -211,22 +215,24 @@ export const bridgeMessageHandler: CommandHandler = async (ctx) => {
   const header = `[orca-bridge from:${sender.from} handle:${sender.handle} at:${sender.worktreeLabel} — reply via orca bridge msg ${sender.from} "<text>"]`
   const messageWithHeader = `${header} ${text}`
 
-  const result = await ctx.client.call<{ send: RuntimeTerminalSend }>('terminal.send', {
-    terminal: resolved.handle,
+  const resultSend = await sendPinnedBridgeText({
+    client: ctx.client,
+    target: resolved.targetDisplay,
+    handle: resolved.handle,
     text: messageWithHeader,
     enter: true,
-    client: { id: 'orca-bridge', type: 'desktop' }
+    reaim: ctx.flags.get('reaim') === true
   })
 
   clearRead(resolved.handle)
 
-  if (result.result.send.accepted) {
+  if (resultSend.accepted) {
     await emitTrace('message', text)
   }
 
   if (ctx.json) {
-    console.log(JSON.stringify(result.result.send))
-  } else if (!result.result.send.accepted) {
+    console.log(JSON.stringify(resultSend))
+  } else if (!resultSend.accepted) {
     throw new RuntimeClientError('internal_error', 'Terminal did not accept message')
   }
 }
@@ -263,11 +269,13 @@ export const bridgeKeysHandler: CommandHandler = async (ctx) => {
   for (const key of keys) {
     const resolvedKey = KEY_MAP[key] ?? key
     const isEnter = resolvedKey === '\r'
-    await ctx.client.call<{ send: RuntimeTerminalSend }>('terminal.send', {
-      terminal: resolved.handle,
+    await sendPinnedBridgeText({
+      client: ctx.client,
+      target: resolved.targetDisplay,
+      handle: resolved.handle,
       text: isEnter ? '' : resolvedKey,
       enter: isEnter,
-      client: { id: 'orca-bridge', type: 'desktop' }
+      reaim: ctx.flags.get('reaim') === true
     })
   }
 

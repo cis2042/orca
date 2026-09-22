@@ -63,7 +63,7 @@ export class OrcaRuntimeWithResolveAuthoritativeTerminalWaitPermission extends O
     action: { text?: string; enter?: boolean; interrupt?: boolean },
     payload: string,
     options: RuntimeTerminalWriteOptions = {}
-  ): Promise<void> {
+  ): Promise<AgentSessionPtyWriteAdmittance> {
     return this.terminalWriter.writeAction(ptyId, action, payload, options)
   }
 

@@ -95,7 +95,10 @@ export async function emitA2ATrace(
       toIndex,
       type: args.type,
       text: args.text,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      // Why: the bridge already wrote via terminal.send. Dispatching here re-resolves @index
+      // and can paste into the session the user switched to.
+      dispatch: false
     })
     .catch(() => {
       // Best effort trace emission

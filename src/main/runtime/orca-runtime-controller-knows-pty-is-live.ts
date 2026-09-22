@@ -93,6 +93,7 @@ export class OrcaRuntimeWithControllerKnowsPtyIsLive extends OrcaRuntimeWithReso
       text?: string
       enter?: boolean
       interrupt?: boolean
+      expectedAgentSession?: { sessionId: string | null; runtimeFence: number | null }
     },
     options: {
       signal?: AbortSignal
@@ -102,6 +103,9 @@ export class OrcaRuntimeWithControllerKnowsPtyIsLive extends OrcaRuntimeWithReso
       suffixFailureError?: string
     } = {}
   ): Promise<RuntimeTerminalSend> {
+    const writeOptions = action.expectedAgentSession
+      ? { ...options, expectedAgentSession: action.expectedAgentSession }
+      : options
     const pty = this.getLivePtyForHandle(handle)
     if (pty) {
       if (!pty.pty.connected) {
@@ -112,11 +116,15 @@ export class OrcaRuntimeWithControllerKnowsPtyIsLive extends OrcaRuntimeWithReso
         throw new Error('invalid_terminal_send')
       }
       await assertTerminalInputWithinLimitWithYield(action.text)
-      await this.writeTerminalAction(pty.pty.ptyId, action, payload, options)
+      const admitted = await this.writeTerminalAction(pty.pty.ptyId, action, payload, writeOptions)
       return {
         handle,
         accepted: true,
-        bytesWritten: Buffer.byteLength(payload, 'utf8')
+        bytesWritten: Buffer.byteLength(payload, 'utf8'),
+        agentSessionAim: {
+          sessionId: admitted.sessionId,
+          runtimeFence: admitted.runtimeFence
+        }
       }
     }
 
@@ -137,12 +145,16 @@ export class OrcaRuntimeWithControllerKnowsPtyIsLive extends OrcaRuntimeWithReso
       throw new Error('terminal_not_writable')
     }
 
-    await this.writeTerminalAction(leaf.ptyId, action, payload, options)
+    const admitted = await this.writeTerminalAction(leaf.ptyId, action, payload, writeOptions)
 
     return {
       handle,
       accepted: true,
-      bytesWritten: Buffer.byteLength(payload, 'utf8')
+      bytesWritten: Buffer.byteLength(payload, 'utf8'),
+      agentSessionAim: {
+        sessionId: admitted.sessionId,
+        runtimeFence: admitted.runtimeFence
+      }
     }
   }
 

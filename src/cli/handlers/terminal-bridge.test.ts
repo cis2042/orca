@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { forgetBridgeSessionPins } from './terminal-bridge-session-pin'
 import type {
   RuntimeTerminalListResult,
   RuntimeTerminalRead,
@@ -41,6 +42,7 @@ describe('terminal bridge CLI', () => {
 
   afterEach(() => {
     process.env = { ...originalEnv }
+    forgetBridgeSessionPins()
     vi.restoreAllMocks()
   })
 
