@@ -473,6 +473,10 @@ export type GlobalSettings = {
   experimentalAgentHibernation?: boolean
   /** Milliseconds a completed agent must stay idle before hibernation can be considered. */
   agentHibernationIdleMs?: number
+  /** Remove clean, unpinned workspaces with no terminal, browser, or agent activity after the idle window. */
+  autoRemoveIdleWorkspaces?: boolean
+  /** Milliseconds a workspace must stay idle before auto-removal. */
+  autoRemoveIdleWorkspacesIdleMs?: number
   /** Experimental: opt-in preview of the updated worktree-card layout and metadata behavior. */
   experimentalNewWorktreeCardStyle?: boolean
   /** Experimental: per-workspace on-demand environment recipes and setup surface. */
