@@ -5,7 +5,8 @@ import {
   GitCommitHorizontal,
   MonitorSmartphone,
   Moon,
-  SquareTerminal
+  SquareTerminal,
+  Timer
 } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
@@ -32,6 +33,10 @@ const SidebarWorkspaceFilterSection = React.memo(function SidebarWorkspaceFilter
   const setAlwaysShowDefaultBranchWorkspace = useAppStore(
     (s) => s.setAlwaysShowDefaultBranchWorkspace
   )
+  const autoRemoveIdleWorkspaces = useAppStore(
+    (s) => s.settings?.autoRemoveIdleWorkspaces !== false
+  )
+  const updateSettings = useAppStore((s) => s.updateSettings)
   const showOtherClientFilter =
     !runtimeEnvironmentCatalogHydrated ||
     runtimeEnvironments.length > 0 ||
@@ -71,6 +76,19 @@ const SidebarWorkspaceFilterSection = React.memo(function SidebarWorkspaceFilter
           onChange={setAlwaysShowDefaultBranchWorkspace}
         />
       )}
+      <FilterToggleRow
+        icon={<Timer className="size-3.5" />}
+        label={translate(
+          'auto.components.sidebar.SidebarWorkspaceFilterSection.autoRemoveIdle',
+          'Auto-remove after 1h idle'
+        )}
+        ariaLabel={translate(
+          'auto.components.sidebar.SidebarWorkspaceFilterSection.autoRemoveIdleAria',
+          'Remove clean, unpinned workspaces with no terminal, browser, or agent activity for an hour'
+        )}
+        checked={autoRemoveIdleWorkspaces}
+        onChange={(v) => void updateSettings({ autoRemoveIdleWorkspaces: v })}
+      />
       <FilterToggleRow
         icon={<GitBranch className="size-3.5" />}
         label={translate(

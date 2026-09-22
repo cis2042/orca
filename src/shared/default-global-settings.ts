@@ -242,6 +242,8 @@ export function buildDefaultSettings(args: {
     experimentalTerminalAttention: false,
     experimentalAgentHibernation: false,
     agentHibernationIdleMs: 30 * 60 * 1000,
+    autoRemoveIdleWorkspaces: true,
+    autoRemoveIdleWorkspacesIdleMs: 60 * 60 * 1000,
     experimentalNewWorktreeCardStyle: false,
     experimentalEphemeralVms: false,
     compactWorktreeCards: false,
