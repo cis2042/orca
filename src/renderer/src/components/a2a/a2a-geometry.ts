@@ -50,6 +50,23 @@ export function findTerminalPane(tabId: string): HTMLElement | null {
   }, null)
 }
 
+export function findTerminalTabTitle(targetIndex?: number, targetName?: string): string | null {
+  if (typeof document === 'undefined') {
+    return null
+  }
+  const cleanTargetName = targetName?.replace(/^[@#]/, '')
+  const tabRoots = Array.from(
+    document.querySelectorAll<HTMLElement>('[data-tab-id][data-terminal-index]')
+  )
+  const match = tabRoots.find((el) => {
+    if (targetIndex !== undefined) {
+      return el.dataset.terminalIndex === String(targetIndex)
+    }
+    return Boolean(cleanTargetName) && el.dataset.terminalIndex === cleanTargetName
+  })
+  return match?.dataset.tabTitle?.trim() || null
+}
+
 export function findTerminalElement(targetIndex?: number, targetName?: string): Element | null {
   if (typeof document === 'undefined') {
     return null
@@ -103,6 +120,7 @@ export function findTerminalElement(targetIndex?: number, targetName?: string): 
 
 export function resolveLinkGeometries(activeLinks: A2ALinkEvent[]): ResolvedLinkGeometry[] {
   return activeLinks.map((link) => {
+    const motif = getA2AConnectionMotif(link, findTerminalTabTitle(link.fromIndex, link.from))
     const elFrom = findTerminalElement(link.fromIndex, link.from)
     const elTo = findTerminalElement(link.toIndex, link.to)
 
@@ -119,7 +137,7 @@ export function resolveLinkGeometries(activeLinks: A2ALinkEvent[]): ResolvedLink
         midY: p1 ? p1.y + 28 : p2 ? p2.y + 28 : 0,
         pathD: '',
         isFallback: true,
-        motif: getA2AConnectionMotif(link)
+        motif
       }
     }
 
@@ -140,7 +158,7 @@ export function resolveLinkGeometries(activeLinks: A2ALinkEvent[]): ResolvedLink
         midY: p1.y - 65,
         pathD,
         isFallback: false,
-        motif: getA2AConnectionMotif(link)
+        motif
       }
     }
 
@@ -176,7 +194,7 @@ export function resolveLinkGeometries(activeLinks: A2ALinkEvent[]): ResolvedLink
       midY,
       pathD,
       isFallback: false,
-      motif: getA2AConnectionMotif(link)
+      motif
     }
   })
 }

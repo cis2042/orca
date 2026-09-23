@@ -83,6 +83,10 @@
   --color-a2a-chain: var(--a2a-chain);
   --color-a2a-water: var(--a2a-water);
   --color-a2a-tornado: var(--a2a-tornado);
+  --color-a2a-moonlight: var(--a2a-moonlight);
+  --color-a2a-gold: var(--a2a-gold);
+  --color-a2a-blossom: var(--a2a-blossom);
+  --color-a2a-thunder: var(--a2a-thunder);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-worktree-sidebar: var(--worktree-sidebar);
@@ -208,6 +212,14 @@
   --a2a-water: #38bdf8;
   --a2a-water-hot: #a5f3fc;
   --a2a-tornado: #d946ef;
+  --a2a-moonlight: #f8fafc;
+  --a2a-moonlight-soft: #cbd5e1;
+  --a2a-gold: #fbbf24;
+  --a2a-gold-core: #fff3b0;
+  --a2a-blossom: #f472b6;
+  --a2a-blossom-soft: #fbcfe8;
+  --a2a-thunder: #8b5cf6;
+  --a2a-thunder-core: #e9d5ff;
   --terminal-pane-locate: var(--color-blue-600);
   --ai-action-accent: var(--color-violet-500);
   /* "An agent is asking you something" — one hue for every surface that shows
@@ -345,6 +357,14 @@
   --a2a-water: #38bdf8;
   --a2a-water-hot: #a5f3fc;
   --a2a-tornado: #d946ef;
+  --a2a-moonlight: #f8fafc;
+  --a2a-moonlight-soft: #cbd5e1;
+  --a2a-gold: #fbbf24;
+  --a2a-gold-core: #fff3b0;
+  --a2a-blossom: #f472b6;
+  --a2a-blossom-soft: #fbcfe8;
+  --a2a-thunder: #8b5cf6;
+  --a2a-thunder-core: #e9d5ff;
   --terminal-pane-locate: var(--color-blue-400);
   --ai-action-accent: var(--color-violet-400);
   --agent-question: var(--color-orange-500);
@@ -3319,10 +3339,139 @@ html.native-shell .app-layout {
   stroke-width: 2;
 }
 
+.a2a-motif-moonlight-carrier {
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--a2a-moonlight) 90%, transparent));
+}
+
+.a2a-motif-moonlight-tail {
+  fill: var(--a2a-moonlight-soft);
+  opacity: 0.85;
+}
+
+.a2a-motif-moonlight-core {
+  fill: var(--a2a-moonlight);
+  stroke: var(--a2a-moonlight-soft);
+  stroke-width: 1.2;
+}
+
+.a2a-motif-moonlight-spark {
+  fill: var(--a2a-moonlight);
+  animation: a2a-moonlight-twinkle 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes a2a-moonlight-twinkle {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.a2a-motif-gold-carrier {
+  filter: drop-shadow(0 0 9px color-mix(in srgb, var(--a2a-gold) 85%, transparent));
+}
+
+.a2a-motif-gold-shaft {
+  fill: none;
+  stroke: var(--a2a-gold);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+}
+
+.a2a-motif-gold-blade {
+  fill: var(--a2a-gold-core);
+  stroke: var(--a2a-gold);
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+}
+
+.a2a-motif-gold-ring {
+  fill: none;
+  stroke: var(--a2a-gold-core);
+  stroke-width: 1.6;
+  animation: a2a-gold-shimmer 0.8s linear infinite alternate;
+}
+
+@keyframes a2a-gold-shimmer {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.a2a-motif-blossom-carrier {
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--a2a-blossom) 80%, transparent));
+}
+
+.a2a-motif-blossom-bloom {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: a2a-blossom-spin 2.4s linear infinite;
+}
+
+@keyframes a2a-blossom-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.a2a-motif-petal,
+.a2a-motif-petal-soft {
+  fill: var(--a2a-blossom-soft);
+  stroke: var(--a2a-blossom);
+  stroke-width: 1;
+}
+
+.a2a-motif-petal-soft {
+  opacity: 0.7;
+}
+
+.a2a-motif-blossom-heart {
+  fill: var(--a2a-blossom);
+}
+
+.a2a-motif-thunder-carrier {
+  filter: drop-shadow(0 0 9px color-mix(in srgb, var(--a2a-thunder) 90%, transparent));
+}
+
+.a2a-motif-bolt {
+  fill: var(--a2a-thunder-core);
+  stroke: var(--a2a-thunder);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  animation: a2a-thunder-flicker 0.32s steps(2, end) infinite;
+}
+
+.a2a-motif-bolt-arc {
+  fill: none;
+  stroke: var(--a2a-thunder);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: a2a-thunder-flicker 0.24s steps(2, end) infinite reverse;
+}
+
+@keyframes a2a-thunder-flicker {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.45;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .a2a-link-beam-flow,
   .a2a-link-beam-flow-core,
-  .a2a-motif-tornado-spin {
+  .a2a-motif-tornado-spin,
+  .a2a-motif-moonlight-spark,
+  .a2a-motif-gold-ring,
+  .a2a-motif-blossom-bloom,
+  .a2a-motif-bolt,
+  .a2a-motif-bolt-arc {
     animation: none !important;
   }
 
