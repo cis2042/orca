@@ -123,11 +123,15 @@ export function TerminalPaneSurface({
     const tabs = state.tabsByWorktree[worktreeId]
     return tabs?.find((t) => t.id === tabId)?.color ?? null
   })
+  const tabCustomTitle = useAppStore((state) => {
+    const tabs = state.tabsByWorktree[worktreeId]
+    return tabs?.find((t) => t.id === tabId)?.customTitle ?? null
+  })
   const tabTitle = useAppStore((state) => {
     const tabs = state.tabsByWorktree[worktreeId]
     return tabs?.find((t) => t.id === tabId)?.title ?? null
   })
-  const generalAura = resolveShuGeneralPaneAura(tabTitle)
+  const generalAura = resolveShuGeneralPaneAura(tabCustomTitle, tabTitle)
 
   return (
     <>

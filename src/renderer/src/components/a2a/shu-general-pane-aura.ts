@@ -9,18 +9,21 @@ export type ShuGeneralPaneAura = {
 }
 
 export function resolveShuGeneralPaneAura(
-  tabTitle: string | null | undefined
+  ...tabTitles: (string | null | undefined)[]
 ): ShuGeneralPaneAura | null {
-  const banner = resolveShuGeneralBanner({ sourceTitle: tabTitle })
-  if (!banner) {
-    return null
-  }
-  const palette = MOTIF_PALETTES[banner.motif]
-  return {
-    general: banner.general,
-    style: {
-      '--general-aura': palette.flowColor,
-      '--general-aura-core': palette.coreColor
+  for (const tabTitle of tabTitles) {
+    const banner = tabTitle ? resolveShuGeneralBanner({ sourceTitle: tabTitle }) : null
+    if (!banner) {
+      continue
+    }
+    const palette = MOTIF_PALETTES[banner.motif]
+    return {
+      general: banner.general,
+      style: {
+        '--general-aura': palette.flowColor,
+        '--general-aura-core': palette.coreColor
+      }
     }
   }
+  return null
 }
