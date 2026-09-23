@@ -34,12 +34,13 @@ function appendTerminalFixture(
   index: number,
   tabId: string,
   tabRect: Omit<Rect, 'right' | 'bottom' | 'x' | 'y' | 'toJSON'>,
-  paneRect: Omit<Rect, 'right' | 'bottom' | 'x' | 'y' | 'toJSON'>
+  paneRect: Omit<Rect, 'right' | 'bottom' | 'x' | 'y' | 'toJSON'>,
+  title = `Agent ${index}`
 ): HTMLElement[] {
   const tab = document.createElement('div')
   tab.setAttribute('data-a2a-test-fixture', '')
   tab.setAttribute('data-tab-id', tabId)
-  tab.setAttribute('data-tab-title', `Agent ${index}`)
+  tab.setAttribute('data-tab-title', title)
   tab.setAttribute('data-terminal-index', String(index))
   setRect(tab, tabRect)
 
@@ -186,6 +187,80 @@ describe('A2AConnectionOverlay', () => {
     const beamFlow = container.querySelector('.a2a-link-beam-flow')
     expect(beamFlow?.getAttribute('stroke')).toBe('url(#a2a-beam-gradient-flame)')
     expect(beamFlow?.getAttribute('marker-end')).toBe('url(#a2a-arrow-flame)')
+
+    fixtureElements.forEach((element) => document.body.removeChild(element))
+  })
+
+  it('paints a signed general order in that general beam', () => {
+    const fixtureElements = [
+      ...appendTerminalFixture(
+        2,
+        'general-tab-2',
+        { left: 100, top: 20, width: 80, height: 30 },
+        { left: 100, top: 100, width: 300, height: 180 }
+      ),
+      ...appendTerminalFixture(
+        5,
+        'general-tab-5',
+        { left: 400, top: 20, width: 80, height: 30 },
+        { left: 800, top: 100, width: 300, height: 180 }
+      )
+    ]
+
+    act(() => {
+      useA2AStore.getState().addTrace({
+        id: 'zhaoyun-order',
+        from: '@2',
+        to: '@5',
+        type: 'message',
+        text: '趙雲令：讀 order 並完整執行'
+      })
+    })
+
+    const { container } = render(<A2AConnectionOverlay />)
+    expect(container.querySelector('.a2a-link-beam')?.getAttribute('class')).toContain(
+      'a2a-link-beam-moonlight'
+    )
+    expect(container.querySelector('.a2a-link-beam-flow')?.getAttribute('stroke')).toBe(
+      'url(#a2a-beam-gradient-moonlight)'
+    )
+    expect(container.querySelector('.a2a-motif-moonlight-carrier')).not.toBeNull()
+
+    fixtureElements.forEach((element) => document.body.removeChild(element))
+  })
+
+  it('paints every dispatch from a general terminal in that general beam', () => {
+    const fixtureElements = [
+      ...appendTerminalFixture(
+        2,
+        'machao-tab-2',
+        { left: 100, top: 20, width: 80, height: 30 },
+        { left: 100, top: 100, width: 300, height: 180 },
+        '馬超 將軍'
+      ),
+      ...appendTerminalFixture(
+        5,
+        'machao-tab-5',
+        { left: 400, top: 20, width: 80, height: 30 },
+        { left: 800, top: 100, width: 300, height: 180 }
+      )
+    ]
+
+    act(() => {
+      useA2AStore.getState().addTrace({
+        id: 'machao-dispatch',
+        from: '@2',
+        to: '@5',
+        type: 'send',
+        text: 'npm test'
+      })
+    })
+
+    const { container } = render(<A2AConnectionOverlay />)
+    expect(container.querySelector('.a2a-link-beam')?.getAttribute('class')).toContain(
+      'a2a-link-beam-gold'
+    )
+    expect(container.querySelector('.a2a-motif-gold-carrier')).not.toBeNull()
 
     fixtureElements.forEach((element) => document.body.removeChild(element))
   })

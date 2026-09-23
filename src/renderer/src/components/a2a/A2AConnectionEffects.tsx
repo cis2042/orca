@@ -1,7 +1,18 @@
 import React from 'react'
 import type { A2ALinkEvent } from '../../../../shared/terminal-a2a-link'
+import { resolveShuGeneralBanner } from './shu-general-motifs'
+import { BlossomMotif, GoldMotif, MoonlightMotif, ThunderMotif } from './ShuGeneralMotifCarriers'
 
-export type A2AConnectionMotif = 'flame' | 'foliage' | 'chain' | 'water' | 'tornado'
+export type A2AConnectionMotif =
+  | 'flame'
+  | 'foliage'
+  | 'chain'
+  | 'water'
+  | 'tornado'
+  | 'moonlight'
+  | 'gold'
+  | 'blossom'
+  | 'thunder'
 
 export type MotifPalette = {
   label: string
@@ -64,10 +75,50 @@ export const MOTIF_PALETTES: Record<A2AConnectionMotif, MotifPalette> = {
     coreColor: 'var(--a2a-flow-soft, #a5f3fc)',
     gradientId: 'a2a-beam-gradient-tornado',
     markerId: 'a2a-arrow-tornado'
+  },
+  moonlight: {
+    label: '趙雲白光',
+    icon: '🌙',
+    sourceColor: 'var(--a2a-moonlight, #f8fafc)',
+    targetColor: 'var(--a2a-moonlight-soft, #cbd5e1)',
+    flowColor: 'var(--a2a-moonlight, #f8fafc)',
+    coreColor: 'var(--a2a-moonlight, #f8fafc)',
+    gradientId: 'a2a-beam-gradient-moonlight',
+    markerId: 'a2a-arrow-moonlight'
+  },
+  gold: {
+    label: '馬超金光',
+    icon: '⚜️',
+    sourceColor: 'var(--a2a-gold, #fbbf24)',
+    targetColor: 'var(--a2a-gold-core, #fff3b0)',
+    flowColor: 'var(--a2a-gold, #fbbf24)',
+    coreColor: 'var(--a2a-gold-core, #fff3b0)',
+    gradientId: 'a2a-beam-gradient-gold',
+    markerId: 'a2a-arrow-gold'
+  },
+  blossom: {
+    label: '姜維粉櫻',
+    icon: '🌸',
+    sourceColor: 'var(--a2a-blossom, #f472b6)',
+    targetColor: 'var(--a2a-blossom-soft, #fbcfe8)',
+    flowColor: 'var(--a2a-blossom, #f472b6)',
+    coreColor: 'var(--a2a-blossom-soft, #fbcfe8)',
+    gradientId: 'a2a-beam-gradient-blossom',
+    markerId: 'a2a-arrow-blossom'
+  },
+  thunder: {
+    label: '張飛紫電',
+    icon: '⚡',
+    sourceColor: 'var(--a2a-thunder, #8b5cf6)',
+    targetColor: 'var(--a2a-thunder-core, #e9d5ff)',
+    flowColor: 'var(--a2a-thunder, #8b5cf6)',
+    coreColor: 'var(--a2a-thunder-core, #e9d5ff)',
+    gradientId: 'a2a-beam-gradient-thunder',
+    markerId: 'a2a-arrow-thunder'
   }
 }
 
-type A2AConnectionEffectsProps = {
+export type A2AConnectionEffectsProps = {
   pathD: string
   motif: A2AConnectionMotif
   compact?: boolean
@@ -75,23 +126,34 @@ type A2AConnectionEffectsProps = {
 
 export const MOTIFS: A2AConnectionMotif[] = ['flame', 'foliage', 'chain', 'water', 'tornado']
 
-export function getA2AConnectionMotif(
-  link: Pick<A2ALinkEvent, 'id' | 'from' | 'to' | 'type'>
-): A2AConnectionMotif {
-  // Allow explicit motif in text (e.g. "motif:flame" or "motif:water") for testing & showcase
-  if (link && 'text' in link && typeof (link as { text?: string }).text === 'string') {
-    const text = (link as { text?: string }).text || ''
-    const match = text.match(/motif:([a-z]+)/i)
-    if (match && MOTIFS.includes(match[1].toLowerCase() as A2AConnectionMotif)) {
-      return match[1].toLowerCase() as A2AConnectionMotif
-    }
-  }
+export const GENERAL_MOTIFS: A2AConnectionMotif[] = ['moonlight', 'gold', 'blossom', 'thunder']
+
+const ALL_MOTIFS: A2AConnectionMotif[] = [...MOTIFS, ...GENERAL_MOTIFS]
+
+function taggedMotif(text: string | undefined): A2AConnectionMotif | undefined {
+  const tag = text?.match(/motif:([a-z]+)/i)?.[1]?.toLowerCase()
+  return ALL_MOTIFS.find((motif) => motif === tag)
+}
+
+function hashedMotif(link: Pick<A2ALinkEvent, 'id' | 'from' | 'to' | 'type'>): A2AConnectionMotif {
   const key = `${link.id}:${link.from}:${link.to}:${link.type}`
   let hash = 0
   for (const character of key) {
     hash = (hash * 31 + character.charCodeAt(0)) >>> 0
   }
   return MOTIFS[hash % MOTIFS.length]
+}
+
+export function getA2AConnectionMotif(
+  link: Pick<A2ALinkEvent, 'id' | 'from' | 'to' | 'type'> &
+    Pick<A2ALinkEvent, 'text' | 'fromLabel'>,
+  sourceTitle?: string | null
+): A2AConnectionMotif {
+  return (
+    taggedMotif(link.text) ??
+    resolveShuGeneralBanner({ sourceTitle, fromLabel: link.fromLabel, text: link.text })?.motif ??
+    hashedMotif(link)
+  )
 }
 
 function DirectionArrow({ pathD, compact }: Pick<A2AConnectionEffectsProps, 'pathD' | 'compact'>) {
@@ -257,6 +319,10 @@ export function A2AConnectionEffects({
       {motif === 'chain' && <ChainMotif {...motifProps} />}
       {motif === 'water' && <WaterMotif {...motifProps} />}
       {motif === 'tornado' && <TornadoMotif {...motifProps} />}
+      {motif === 'moonlight' && <MoonlightMotif {...motifProps} />}
+      {motif === 'gold' && <GoldMotif {...motifProps} />}
+      {motif === 'blossom' && <BlossomMotif {...motifProps} />}
+      {motif === 'thunder' && <ThunderMotif {...motifProps} />}
     </g>
   )
 }
