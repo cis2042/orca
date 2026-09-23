@@ -11,6 +11,11 @@ describe('resolveShuGeneralPaneAura', () => {
     })
   })
 
+  it('reads the pinned custom title before the live agent title', () => {
+    expect(resolveShuGeneralPaneAura('關羽 將軍', '✳ 徐庶關閉')?.general).toBe('關羽')
+    expect(resolveShuGeneralPaneAura(null, '✳ Order zhaoyun opus55')?.general).toBe('趙雲')
+  })
+
   it('leaves ordinary panes alone', () => {
     expect(resolveShuGeneralPaneAura('grok-pkg-3')).toBeNull()
     expect(resolveShuGeneralPaneAura(null)).toBeNull()
