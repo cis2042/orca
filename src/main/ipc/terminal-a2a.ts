@@ -1,5 +1,5 @@
 import { BrowserWindow, ipcMain } from 'electron'
-import { parseTerminalIndex, type A2ALinkEvent } from '../../shared/terminal-a2a-link'
+import { resolveA2ADispatchTarget, type A2ALinkEvent } from '../../shared/terminal-a2a-link'
 
 export const TERMINAL_A2A_LINK_CHANNEL = 'terminal:a2a-link'
 
@@ -29,10 +29,13 @@ type TerminalDescriptorLike = {
   title?: string | null
   preview?: string | null
   branch?: string | null
+  worktreeId?: string | null
 }
 
 type RuntimeTerminalBridgeLike = {
-  listTerminals: () => Promise<{ terminals?: TerminalDescriptorLike[] } | undefined>
+  listTerminals: (
+    worktree?: string
+  ) => Promise<{ terminals?: TerminalDescriptorLike[] } | undefined>
   sendTerminal: (
     handle: string,
     payload: {
@@ -70,29 +73,17 @@ export function registerTerminalA2AHandlers(options?: {
     const runtime = options?.getRuntime?.()
     if (event.text && runtime) {
       try {
-        const listRes = await runtime.listTerminals()
-        const terminals = listRes?.terminals ?? []
+        const listRes = await runtime.listTerminals(
+          event.worktreeId ? `id:${event.worktreeId}` : undefined
+        )
+        const resolved = resolveA2ADispatchTarget(listRes?.terminals ?? [], {
+          to: event.to,
+          toIndex: event.toIndex,
+          worktreeId: event.worktreeId
+        })
 
-        const targetIndex = event.toIndex ?? parseTerminalIndex(event.to)
-        let match = terminals.find((t: TerminalDescriptorLike) => t.handle === event.to)
-        if (!match && targetIndex !== undefined) {
-          match = terminals.find(
-            (t: TerminalDescriptorLike, idx: number) =>
-              t.index === targetIndex || (!t.index && idx + 1 === targetIndex)
-          )
-        }
-        if (!match && event.to.startsWith('@')) {
-          const label = event.to.slice(1).toLowerCase()
-          match = terminals.find(
-            (t: TerminalDescriptorLike) =>
-              t.title?.toLowerCase() === label ||
-              t.preview?.toLowerCase().includes(label) ||
-              t.branch?.toLowerCase() === label
-          )
-        }
-
-        if (match) {
-          targetHandle = match.handle
+        if ('handle' in resolved) {
+          targetHandle = resolved.handle
           let messageToSend = event.text
           if (event.type === 'message') {
             const header = `[orca-bridge from:${event.from} to:${event.to}]`
@@ -111,7 +102,7 @@ export function registerTerminalA2AHandlers(options?: {
           bytesWritten = sendRes?.bytesWritten ?? messageToSend.length
           executionState = delivered ? 'delivered' : 'failed'
         } else {
-          errorMessage = `No active terminal found for target "${event.to}"`
+          errorMessage = resolved.error
           executionState = 'failed'
         }
       } catch (err: unknown) {

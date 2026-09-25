@@ -4,7 +4,9 @@ import { useAppStore } from '../../store'
 import { A2ATelemetrySummary } from './A2ATelemetrySummary'
 import { AgentTopologyEdges } from './AgentTopologyEdges'
 import { AgentTopologyInspector } from './AgentTopologyInspector'
+import { a2aEventInSession } from '../../../../shared/terminal-a2a-link'
 import { summarizeA2AConnections, type A2ADirectedConnection } from './a2a-telemetry'
+import { sessionTerminalTabSelector } from './a2a-geometry'
 
 export type AgentNodeData = {
   index: number
@@ -48,16 +50,20 @@ export function AgentTopologyGraph(): React.JSX.Element {
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null)
   const [renderedAt] = useState(() => Date.now())
 
+  const activeWorktreeId = useAppStore((s) => s.activeWorktreeId) ?? ''
   const tabsByWorktree = useAppStore((s) => s.tabsByWorktree)
-  const activeWorktreeId = Object.keys(tabsByWorktree)[0] || ''
   const currentTabs = useMemo(
-    () => tabsByWorktree[activeWorktreeId] ?? [],
+    () => (activeWorktreeId ? (tabsByWorktree[activeWorktreeId] ?? []) : []),
     [tabsByWorktree, activeWorktreeId]
   )
 
   const telemetry = useMemo(
-    () => summarizeA2AConnections(recentTraces, activeLinks),
-    [recentTraces, activeLinks]
+    () =>
+      summarizeA2AConnections(
+        recentTraces.filter((trace) => a2aEventInSession(trace, activeWorktreeId)),
+        activeLinks.filter((link) => a2aEventInSession(link, activeWorktreeId))
+      ),
+    [recentTraces, activeLinks, activeWorktreeId]
   )
 
   // Discover all distinct agent indexes from recent traces and DOM
@@ -65,8 +71,8 @@ export function AgentTopologyGraph(): React.JSX.Element {
     const indexMap = new Map<number, { label?: string; lastSeen: number }>()
 
     // Check DOM for open tabs with terminal index
-    if (typeof document !== 'undefined') {
-      const tabElements = document.querySelectorAll('[data-terminal-index]')
+    if (typeof document !== 'undefined' && activeWorktreeId) {
+      const tabElements = document.querySelectorAll(sessionTerminalTabSelector(activeWorktreeId))
       tabElements.forEach((el) => {
         const raw = el.getAttribute('data-terminal-index')
         const idx = raw ? Number.parseInt(raw, 10) : Number.NaN
@@ -79,6 +85,9 @@ export function AgentTopologyGraph(): React.JSX.Element {
 
     // Check recent traces
     for (const trace of recentTraces) {
+      if (trace.worktreeId && activeWorktreeId && trace.worktreeId !== activeWorktreeId) {
+        continue
+      }
       if (trace.fromIndex) {
         const existing = indexMap.get(trace.fromIndex)
         indexMap.set(trace.fromIndex, {
@@ -107,7 +116,11 @@ export function AgentTopologyGraph(): React.JSX.Element {
 
     return sortedIndexes.map((idx) => {
       const info = indexMap.get(idx)
-      const isCommunicating = activeLinks.some((l) => l.fromIndex === idx || l.toIndex === idx)
+      const isCommunicating = activeLinks.some(
+        (link) =>
+          a2aEventInSession(link, activeWorktreeId) &&
+          (link.fromIndex === idx || link.toIndex === idx)
+      )
       const isActive = isCommunicating || (info?.lastSeen ? now - info.lastSeen < 15000 : false)
       const tab = currentTabs[idx - 1]
       return {
@@ -121,7 +134,7 @@ export function AgentTopologyGraph(): React.JSX.Element {
         tabId: tab?.id
       }
     })
-  }, [recentTraces, activeLinks, currentTabs, renderedAt])
+  }, [recentTraces, activeLinks, currentTabs, renderedAt, activeWorktreeId])
 
   // Compute node positions on an SVG coordinate space (680 x 380)
   const nodePositions = useMemo(() => {
@@ -165,7 +178,9 @@ export function AgentTopologyGraph(): React.JSX.Element {
     if (typeof document === 'undefined') {
       return
     }
-    const targetTab = document.querySelector<HTMLElement>(`[data-terminal-index="${index}"]`)
+    const targetTab = activeWorktreeId
+      ? document.querySelector<HTMLElement>(sessionTerminalTabSelector(activeWorktreeId, index))
+      : null
     if (targetTab) {
       targetTab.click()
     }
@@ -177,9 +192,11 @@ export function AgentTopologyGraph(): React.JSX.Element {
       return []
     }
     return recentTraces.filter(
-      (t) => t.fromIndex === selectedAgentIndex || t.toIndex === selectedAgentIndex
+      (trace) =>
+        a2aEventInSession(trace, activeWorktreeId) &&
+        (trace.fromIndex === selectedAgentIndex || trace.toIndex === selectedAgentIndex)
     )
-  }, [selectedAgentIndex, recentTraces])
+  }, [selectedAgentIndex, recentTraces, activeWorktreeId])
 
   return (
     <div className="relative flex flex-col size-full overflow-hidden bg-a2a-canvas/90 select-none">

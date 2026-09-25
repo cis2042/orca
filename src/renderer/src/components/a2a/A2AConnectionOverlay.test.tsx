@@ -3,6 +3,9 @@ import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
 import { A2AConnectionOverlay } from './A2AConnectionOverlay'
 import { useA2AStore } from '../../store/a2a-traces-store'
+import { useAppStore } from '../../store'
+
+const SESSION = 'session-a'
 
 type Rect = {
   left: number
@@ -41,6 +44,7 @@ function appendTerminalFixture(
   tab.setAttribute('data-a2a-test-fixture', '')
   tab.setAttribute('data-tab-id', tabId)
   tab.setAttribute('data-tab-title', title)
+  tab.setAttribute('data-worktree-id', SESSION)
   tab.setAttribute('data-terminal-index', String(index))
   setRect(tab, tabRect)
 
@@ -53,9 +57,26 @@ function appendTerminalFixture(
   return [tab, terminalPane]
 }
 
+function landTrace(input: {
+  from: string
+  to: string
+  id?: string
+  text?: string
+  type?: 'send' | 'message' | 'type' | 'keys'
+  worktreeId?: string
+}) {
+  return useA2AStore.getState().addTrace({
+    worktreeId: SESSION,
+    ...input,
+    delivered: true,
+    executionState: 'delivered'
+  })
+}
+
 describe('A2AConnectionOverlay', () => {
   beforeEach(() => {
     useA2AStore.getState().clearTraces()
+    useAppStore.setState({ activeWorktreeId: SESSION })
   })
 
   afterEach(() => {
@@ -63,6 +84,7 @@ describe('A2AConnectionOverlay', () => {
     document.querySelectorAll('[data-a2a-test-fixture]').forEach((element) => element.remove())
     document.querySelectorAll('[data-a2a-test-menu-entry]').forEach((element) => element.remove())
     useA2AStore.getState().clearTraces()
+    useAppStore.setState({ activeWorktreeId: null })
   })
 
   it('renders overlay container', () => {
@@ -87,7 +109,7 @@ describe('A2AConnectionOverlay', () => {
     ]
 
     act(() => {
-      useA2AStore.getState().addTrace({
+      landTrace({
         from: '@2',
         to: '@5',
         type: 'send',
@@ -128,7 +150,7 @@ describe('A2AConnectionOverlay', () => {
     ]
 
     act(() => {
-      useA2AStore.getState().addTrace({
+      landTrace({
         id: 'motif-proof',
         from: '@2',
         to: '@5',
@@ -172,7 +194,7 @@ describe('A2AConnectionOverlay', () => {
     ]
 
     act(() => {
-      useA2AStore.getState().addTrace({
+      landTrace({
         id: 'flame-proof',
         from: '@2',
         to: '@5',
@@ -302,7 +324,7 @@ describe('A2AConnectionOverlay', () => {
     ]
 
     act(() => {
-      useA2AStore.getState().addTrace({ from: '@2', to: '@5', text: 'real route' })
+      landTrace({ from: '@2', to: '@5', text: 'real route' })
     })
 
     const { container } = render(<A2AConnectionOverlay />)
@@ -328,7 +350,7 @@ describe('A2AConnectionOverlay', () => {
     )
 
     act(() => {
-      useA2AStore.getState().addTrace({ from: '@2', to: '@5', text: 'reflow' })
+      landTrace({ from: '@2', to: '@5', text: 'reflow' })
     })
 
     const { container } = render(<A2AConnectionOverlay />)
@@ -360,7 +382,7 @@ describe('A2AConnectionOverlay', () => {
     )
 
     act(() => {
-      useA2AStore.getState().addTrace({
+      landTrace({
         from: '@1',
         to: '@8',
         type: 'send',
@@ -389,7 +411,7 @@ describe('A2AConnectionOverlay', () => {
     )
 
     act(() => {
-      useA2AStore.getState().addTrace({
+      landTrace({
         from: '@1',
         to: '@1',
         type: 'send',
@@ -418,7 +440,7 @@ describe('A2AConnectionOverlay', () => {
 
     let traceId = ''
     act(() => {
-      const trace = useA2AStore.getState().addTrace({
+      const trace = landTrace({
         from: '@2',
         to: '@8',
         type: 'message',
@@ -447,7 +469,7 @@ describe('A2AConnectionOverlay', () => {
     expect(screen.queryByTestId('a2a-hud-trigger')).toBeNull()
 
     act(() => {
-      useA2AStore.getState().addTrace({ from: '@1', to: '@2' })
+      landTrace({ from: '@1', to: '@2' })
     })
 
     const triggerBtn = screen.getByTestId('a2a-hud-trigger')
@@ -461,11 +483,38 @@ describe('A2AConnectionOverlay', () => {
     fireEvent.click(demoBtn)
 
     const state = useA2AStore.getState()
-    expect(state.activeLinks.some((l) => l.fromIndex === 2 && l.toIndex === 5)).toBe(true)
+    expect(state.activeLinks.some((link) => link.fromIndex === 2 && link.toIndex === 5)).toBe(false)
 
     // Click Open Hub button
     const openHubBtn = screen.getByTitle('展開完整 A2A 調度中樞 (Grokbot Hub)')
     fireEvent.click(openHubBtn)
     expect(useA2AStore.getState().isHubOpen).toBe(true)
+  })
+
+  it('does not draw a delivery that belongs to another session', () => {
+    appendTerminalFixture(
+      2,
+      'foreign-2',
+      { left: 100, top: 20, width: 80, height: 30 },
+      { left: 100, top: 100, width: 300, height: 180 }
+    )
+    appendTerminalFixture(
+      5,
+      'foreign-5',
+      { left: 400, top: 20, width: 80, height: 30 },
+      { left: 800, top: 100, width: 300, height: 180 }
+    )
+    act(() => {
+      useA2AStore.getState().addTrace({
+        from: '@2',
+        to: '@5',
+        text: 'other session',
+        delivered: true,
+        executionState: 'delivered',
+        worktreeId: 'session-b'
+      })
+    })
+    const { container } = render(<A2AConnectionOverlay />)
+    expect(container.querySelector('.a2a-link-beam-flow')).toBeNull()
   })
 })

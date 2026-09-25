@@ -120,5 +120,47 @@ describe('terminal-a2a IPC', () => {
       'term-3',
       expect.objectContaining({ text: 'git status', enter: true })
     )
+
+    mockRuntime.listTerminals.mockResolvedValue({
+      terminals: [
+        { handle: 'pane-a', index: 2, worktreeId: 'session-a' },
+        { handle: 'pane-b', index: 2, worktreeId: 'session-b' }
+      ]
+    })
+    mockSendTerminal.mockClear()
+    const refused = await handler(
+      {},
+      {
+        id: 'cross',
+        from: '@1',
+        to: '@2',
+        toIndex: 2,
+        type: 'send',
+        text: 'do not land here',
+        timestamp: Date.now()
+      }
+    )
+    expect(refused.delivered).toBe(false)
+    expect(mockSendTerminal).not.toHaveBeenCalled()
+
+    const scoped = await handler(
+      {},
+      {
+        id: 'scoped',
+        from: '@1',
+        to: '@2',
+        toIndex: 2,
+        type: 'send',
+        text: 'stay here',
+        timestamp: Date.now(),
+        worktreeId: 'session-a'
+      }
+    )
+    expect(scoped.targetHandle).toBe('pane-a')
+    expect(mockRuntime.listTerminals).toHaveBeenCalledWith('id:session-a')
+    expect(mockSendTerminal).toHaveBeenCalledWith(
+      'pane-a',
+      expect.objectContaining({ text: 'stay here' })
+    )
   })
 })

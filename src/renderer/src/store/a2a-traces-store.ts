@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import {
+  a2aTransmissionLanded,
   parseTerminalIndex,
   type A2ALinkEvent,
   type A2ALinkType
@@ -15,21 +16,22 @@ export type A2ATracesState = {
   toggleHub: () => void
   setHubTab: (tab: 'topology' | 'stream') => void
   setSelectedAgentIndex: (idx: number | null) => void
-  addTrace: (
-    trace: {
-      id?: string
-      from: string
-      to: string
-      fromIndex?: number
-      toIndex?: number
-      fromLabel?: string
-      toLabel?: string
-      type?: A2ALinkType
-      text?: string
-      timestamp?: number
-      durationMs?: number
-    }
-  ) => A2ALinkEvent
+  addTrace: (trace: {
+    id?: string
+    from: string
+    to: string
+    fromIndex?: number
+    toIndex?: number
+    fromLabel?: string
+    toLabel?: string
+    type?: A2ALinkType
+    text?: string
+    timestamp?: number
+    durationMs?: number
+    worktreeId?: string
+    delivered?: boolean
+    executionState?: A2ALinkEvent['executionState']
+  }) => A2ALinkEvent
   removeActiveLink: (id: string) => void
   replayTrace: (id: string) => void
   clearTraces: () => void
@@ -68,20 +70,25 @@ export const useA2AStore = create<A2ATracesState>((set, get) => ({
       type: input.type ?? 'send',
       text: input.text,
       timestamp,
-      durationMs
+      durationMs,
+      worktreeId: input.worktreeId,
+      delivered: input.delivered,
+      executionState: input.executionState
+    }
+
+    if (!a2aTransmissionLanded(event)) {
+      return event
     }
 
     set((state) => {
-      // Filter out any duplicate id
-      const nextActive = [...state.activeLinks.filter((l) => l.id !== id), event]
-      const nextRecent = [event, ...state.recentTraces.filter((l) => l.id !== id)].slice(
+      const nextActive = [...state.activeLinks.filter((link) => link.id !== id), event]
+      const nextRecent = [event, ...state.recentTraces.filter((link) => link.id !== id)].slice(
         0,
         MAX_RECENT_TRACES
       )
       return { activeLinks: nextActive, recentTraces: nextRecent }
     })
 
-    // Auto-remove from activeLinks when duration expires
     setTimeout(() => {
       get().removeActiveLink(id)
     }, durationMs)

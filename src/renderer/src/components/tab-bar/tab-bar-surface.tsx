@@ -112,6 +112,7 @@ export function renderTabBarSurface({
       className="flex items-stretch h-full overflow-hidden flex-1 min-w-0"
       // Why: preload routes native OS drops by this marker — only the tab strip opens files in the editor, not terminal panes.
       data-native-file-drop-target="editor"
+      data-worktree-id={props.worktreeId}
     >
       {tabStripOverflowState.hasOverflow ? (
         <Tooltip>

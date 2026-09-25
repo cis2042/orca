@@ -113,6 +113,39 @@ describe('TERMINAL_A2A_METHODS', () => {
       expect.objectContaining({ expectedAgentSession: aim })
     )
 
+    const ambiguousSend = vi.fn()
+    const ambiguousRuntime = {
+      listTerminals: vi.fn().mockResolvedValue({
+        terminals: [
+          { handle: 'pane-a', index: 2, worktreeId: 'session-a' },
+          { handle: 'pane-b', index: 2, worktreeId: 'session-b' }
+        ]
+      }),
+      sendTerminal: ambiguousSend
+    }
+    const refused = await handler(
+      { from: '@1', to: '@2', type: 'send', text: 'cross', dispatch: true },
+      { runtime: ambiguousRuntime }
+    )
+    expect(refused.delivered).toBe(false)
+    expect(ambiguousSend).not.toHaveBeenCalled()
+
+    const scoped = await handler(
+      {
+        from: '@1',
+        to: '@2',
+        type: 'send',
+        text: 'here',
+        dispatch: true,
+        worktreeId: 'session-b'
+      },
+      { runtime: ambiguousRuntime }
+    )
+    expect(scoped.delivered).toBe(true)
+    expect(scoped.targetHandle).toBe('pane-b')
+    expect(ambiguousRuntime.listTerminals).toHaveBeenCalledWith('id:session-b')
+    expect(ambiguousSend).toHaveBeenCalledWith('pane-b', expect.objectContaining({ text: 'here' }))
+
     broadcastSpy.mockRestore()
   })
 })

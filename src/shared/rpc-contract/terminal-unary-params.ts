@@ -264,6 +264,8 @@ export const TerminalA2ALink = z.object({
   bytesWritten: z.number().optional(),
   executionState: z.enum(['delivered', 'executing', 'failed', 'simulated']).optional(),
   error: OptionalString,
+  // Why: older hosts strip this. Without it, @2 is ambiguous across sessions and must not guess.
+  worktreeId: OptionalString,
   // Why: older hosts strip this. A dispatch that names an aim must not follow a session switch.
   expectedAgentSession: z
     .object({
