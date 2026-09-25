@@ -1,5 +1,10 @@
 import { resolveAgentPromptSubmitDelayForAgent } from '../../shared/agent-prompt-injection'
 import type { TuiAgent } from '../../shared/tui-agent'
+import {
+  AgentSessionPtyWriteRefusedError,
+  assertExpectedAgentSessionAim,
+  type AgentSessionWriteAim
+} from '../../shared/agent-session-pty-write-admission'
 import { iterateTerminalInputChunks } from '../../shared/terminal-input'
 import {
   agentSessionPtyWriteGate,
@@ -12,6 +17,8 @@ export type RuntimeTerminalWriteOptions = {
   reserveWrite?: (ptyId: string) => void
   afterWrite?: (ptyId: string) => void | Promise<void>
   suffixFailureError?: string
+  /** When set, the write is refused if the pane's session is no longer this aim. */
+  expectedAgentSession?: AgentSessionWriteAim
 }
 
 export class RuntimeTerminalWriter {
@@ -27,10 +34,11 @@ export class RuntimeTerminalWriter {
     action: { text?: string; enter?: boolean; interrupt?: boolean },
     payload: string,
     options: RuntimeTerminalWriteOptions = {}
-  ): Promise<void> {
+  ): Promise<AgentSessionPtyWriteAdmittance> {
     // Why: the lease is checked before the mobile floor is reserved, so a refused send never takes
     // a claim it will not use.
     const admitted = agentSessionPtyWriteGate.assertAdmitted(ptyId)
+    assertExpectedAgentSessionAim(admitted, options.expectedAgentSession)
     // Why: direct terminal.send can carry paste-sized text from RPC/mobile
     // clients; chunk text before PTY/ConPTY while preserving suffix separation.
     const text = typeof action.text === 'string' ? action.text : ''
@@ -54,7 +62,7 @@ export class RuntimeTerminalWriter {
       }
       // Why: the 500ms text/suffix pause is long enough for a handoff to complete, so the submit
       // is re-checked against the fence the text was admitted under.
-      agentSessionPtyWriteGate.assertReadmitted(ptyId, admitted)
+      this.assertStillAimed(ptyId, admitted, options.expectedAgentSession)
       try {
         await options.beforeWrite?.(ptyId)
       } catch (error) {
@@ -63,24 +71,41 @@ export class RuntimeTerminalWriter {
         }
         throw error
       }
-      agentSessionPtyWriteGate.assertReadmitted(ptyId, admitted)
+      this.assertStillAimed(ptyId, admitted, options.expectedAgentSession)
       options.reserveWrite?.(ptyId)
       if (!this.write(ptyId, suffix)) {
         throw new Error(options.suffixFailureError ?? 'terminal_not_writable')
       }
       await options.afterWrite?.(ptyId)
-      return
+      return admitted
     }
     if (text) {
-      return
+      return admitted
     }
     await options.beforeWrite?.(ptyId)
-    agentSessionPtyWriteGate.assertReadmitted(ptyId, admitted)
+    this.assertStillAimed(ptyId, admitted, options.expectedAgentSession)
     options.reserveWrite?.(ptyId)
     if (!this.write(ptyId, payload)) {
       throw new Error('terminal_not_writable')
     }
     await options.afterWrite?.(ptyId)
+    return admitted
+  }
+
+  private assertStillAimed(
+    ptyId: string,
+    admitted: AgentSessionPtyWriteAdmittance,
+    expected: AgentSessionWriteAim | undefined
+  ): void {
+    agentSessionPtyWriteGate.assertReadmitted(ptyId, admitted)
+    const current = agentSessionPtyWriteGate.admit(ptyId)
+    if (!current.admitted) {
+      throw new AgentSessionPtyWriteRefusedError(current.refusal)
+    }
+    assertExpectedAgentSessionAim(
+      { sessionId: current.sessionId, runtimeFence: current.runtimeFence },
+      expected
+    )
   }
 
   async writeChunks(
@@ -94,11 +119,11 @@ export class RuntimeTerminalWriter {
     let firstChunk = true
     while (!chunk.done) {
       if (!firstChunk) {
-        agentSessionPtyWriteGate.assertReadmitted(ptyId, admitted)
+        this.assertStillAimed(ptyId, admitted, options.expectedAgentSession)
       }
       firstChunk = false
       await options.beforeWrite?.(ptyId)
-      agentSessionPtyWriteGate.assertReadmitted(ptyId, admitted)
+      this.assertStillAimed(ptyId, admitted, options.expectedAgentSession)
       options.reserveWrite?.(ptyId)
       if (!this.write(ptyId, chunk.value)) {
         throw new Error('terminal_not_writable')

@@ -1,6 +1,9 @@
 import { defineMethod } from '../../core'
 import { broadcastA2ALink } from '../../../../ipc/terminal-a2a'
-import { parseTerminalIndex, type A2ALinkEvent } from '../../../../../shared/terminal-a2a-link'
+import {
+  resolveA2ADispatchTarget,
+  type A2ALinkEvent
+} from '../../../../../shared/terminal-a2a-link'
 import { TerminalA2ALink } from './unary-schemas'
 
 export const TERMINAL_A2A_METHODS = [
@@ -19,29 +22,17 @@ export const TERMINAL_A2A_METHODS = [
 
       if (shouldDispatch && ctx?.runtime) {
         try {
-          const listRes = await ctx.runtime.listTerminals()
-          const terminals = listRes?.terminals ?? []
+          const listRes = await ctx.runtime.listTerminals(
+            params.worktreeId ? `id:${params.worktreeId}` : undefined
+          )
+          const resolved = resolveA2ADispatchTarget(listRes?.terminals ?? [], {
+            to: params.to,
+            toIndex: params.toIndex,
+            worktreeId: params.worktreeId
+          })
 
-          const targetIndex = params.toIndex ?? parseTerminalIndex(params.to)
-          let match = terminals.find((t) => t.handle === params.to)
-          if (!match && targetIndex !== undefined) {
-            match = terminals.find(
-              (t: { index?: number }, idx: number) =>
-                t.index === targetIndex || (!t.index && idx + 1 === targetIndex)
-            )
-          }
-          if (!match && params.to.startsWith('@')) {
-            const label = params.to.slice(1).toLowerCase()
-            match = terminals.find(
-              (t) =>
-                t.title?.toLowerCase() === label ||
-                t.preview?.toLowerCase().includes(label) ||
-                t.branch?.toLowerCase() === label
-            )
-          }
-
-          if (match) {
-            targetHandle = match.handle
+          if ('handle' in resolved) {
+            targetHandle = resolved.handle
             let messageToSend = params.text ?? ''
             if (params.type === 'message') {
               const header = `[orca-bridge from:${params.from} to:${params.to}]`
@@ -50,19 +41,44 @@ export const TERMINAL_A2A_METHODS = [
 
             const sendRes = await ctx.runtime.sendTerminal(targetHandle, {
               text: messageToSend,
-              enter: params.type !== 'type'
+              enter: params.type !== 'type',
+              ...(params.expectedAgentSession
+                ? { expectedAgentSession: params.expectedAgentSession }
+                : {})
             })
 
             delivered = sendRes?.accepted ?? true
             bytesWritten = sendRes?.bytesWritten ?? messageToSend.length
             executionState = delivered ? 'delivered' : 'failed'
           } else {
-            errorMessage = `No active terminal found for target "${params.to}"`
+            errorMessage = resolved.error
             executionState = 'failed'
           }
         } catch (err: unknown) {
           errorMessage = err instanceof Error ? err.message : String(err)
           executionState = 'failed'
+        }
+      } else if (params.dispatch === false) {
+        delivered = params.delivered ?? true
+        executionState = (params.executionState as typeof executionState) || 'delivered'
+        targetHandle = params.targetHandle
+      }
+
+      let worktreeId = params.worktreeId
+      if (!worktreeId && ctx?.runtime) {
+        try {
+          const listRes = await ctx.runtime.listTerminals(undefined)
+          const matched = (listRes?.terminals ?? []).find(
+            (t) =>
+              (targetHandle && t.handle === targetHandle) ||
+              (params.toIndex && t.index === params.toIndex) ||
+              (params.targetHandle && t.handle === params.targetHandle)
+          )
+          if (matched?.worktreeId) {
+            worktreeId = matched.worktreeId
+          }
+        } catch {
+          // Best effort
         }
       }
 
@@ -76,6 +92,7 @@ export const TERMINAL_A2A_METHODS = [
         toLabel: params.toLabel,
         type: params.type ?? 'send',
         text: params.text,
+        worktreeId,
         timestamp: params.timestamp ?? Date.now(),
         durationMs: params.durationMs,
         delivered,

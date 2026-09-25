@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { lazyWithRetry as lazy } from '@/lib/lazy-with-retry'
 import { AgentHibernationGate } from '../components/AgentHibernationGate'
+import { IdleWorktreeAutoRemovalGate } from '../components/IdleWorktreeAutoRemovalGate'
 import { AiVaultTabTitleSyncGate } from '../components/AiVaultTabTitleSyncGate'
 import RetainedAgentsSyncGate from '../components/dashboard/RetainedAgentsSyncGate'
 import { WorkspacePortScanner } from '../components/ports/WorkspacePortScanner'
@@ -35,6 +36,7 @@ export function AppBackgroundServices(): React.JSX.Element {
         </Suspense>
       ) : null}
       <AgentHibernationGate />
+      <IdleWorktreeAutoRemovalGate />
       <StructuredAgentSessionStatusBridge />
       {/* Why here and not in the chat pane: a backgrounded chat has no mounted pane, and that is
           exactly the completion the user needs the dot for. */}

@@ -94,6 +94,32 @@ describe('terminal.send under a refusing lease', () => {
     expect(rollback).toHaveBeenCalled()
   })
 
+  it('forwards the aimed session so a switched pane can be refused', async () => {
+    const sendTerminal = vi.fn().mockResolvedValue({
+      handle: 'terminal-1',
+      accepted: true,
+      bytesWritten: 5
+    })
+    const runtime = stubRuntime({ sendTerminal })
+    const dispatcher = new RpcDispatcher({ runtime, methods: TERMINAL_METHODS })
+    const aim = { sessionId: 'session-alpha-1', runtimeFence: 7 }
+
+    await dispatcher.dispatch(
+      makeRequest({
+        terminal: 'terminal-1',
+        text: 'hello',
+        expectedAgentSession: aim,
+        client: { id: 'desktop-1', type: 'desktop' }
+      })
+    )
+
+    expect(sendTerminal).toHaveBeenCalledWith(
+      'terminal-1',
+      expect.objectContaining({ expectedAgentSession: aim }),
+      expect.anything()
+    )
+  })
+
   it('still surfaces unrelated send failures as errors', async () => {
     const runtime = stubRuntime({
       sendTerminal: vi.fn().mockRejectedValue(new Error('terminal_not_writable'))

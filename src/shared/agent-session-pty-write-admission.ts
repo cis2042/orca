@@ -146,6 +146,36 @@ export function reevaluateAgentSessionPtyWriteAdmission(args: {
   return next
 }
 
+/** The session a sender aimed at. Null means the pane had no durable session. */
+export type AgentSessionWriteAim = {
+  sessionId: string | null
+  runtimeFence: number | null
+}
+
+/** Omitted aim follows the pane's current session. A named aim is refused once that session moves. */
+export function assertExpectedAgentSessionAim(
+  admitted: AgentSessionWriteAim,
+  expected: AgentSessionWriteAim | undefined
+): void {
+  if (!expected) {
+    return
+  }
+  if (
+    admitted.sessionId === expected.sessionId &&
+    admitted.runtimeFence === expected.runtimeFence
+  ) {
+    return
+  }
+  throw new AgentSessionPtyWriteRefusedError({
+    code: 'agent_session_checkpoint_stale',
+    sessionId: expected.sessionId ?? admitted.sessionId ?? 'unbound',
+    ownerRuntimeKind: null,
+    handoffStage: null,
+    ownerPid: null,
+    runtimeFence: admitted.runtimeFence
+  })
+}
+
 export class AgentSessionPtyWriteRefusedError extends Error {
   readonly refusal: AgentSessionPtyWriteRefusal
 

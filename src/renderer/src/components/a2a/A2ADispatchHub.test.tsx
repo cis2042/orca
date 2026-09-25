@@ -3,6 +3,7 @@ import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
 import { A2ADispatchHub } from './A2ADispatchHub'
 import { useA2AStore } from '../../store/a2a-traces-store'
+import { useAppStore } from '../../store'
 
 describe('A2ADispatchHub', () => {
   beforeEach(() => {
@@ -15,6 +16,7 @@ describe('A2ADispatchHub', () => {
   afterEach(() => {
     cleanup()
     useA2AStore.getState().clearTraces()
+    useAppStore.setState({ activeWorktreeId: null })
   })
 
   it('renders null when isHubOpen is false', () => {
@@ -79,6 +81,9 @@ describe('A2ADispatchHub', () => {
   })
 
   it('commander bar dispatches commands and adds trace to store', async () => {
+    const sendA2ALink = vi.fn().mockResolvedValue({ delivered: true })
+    window.api = { ui: { sendA2ALink } } as never
+    useAppStore.setState({ activeWorktreeId: 'session-a' })
     useA2AStore.getState().setHubOpen(true)
     render(<A2ADispatchHub />)
 
@@ -86,12 +91,16 @@ describe('A2ADispatchHub', () => {
     fireEvent.change(input, { target: { value: '@5 run smoke test' } })
 
     const dispatchBtn = screen.getByText('派工')
-    fireEvent.click(dispatchBtn)
+    await act(async () => {
+      fireEvent.click(dispatchBtn)
+    })
 
     const state = useA2AStore.getState()
     expect(state.recentTraces).toHaveLength(1)
     expect(state.recentTraces[0].toIndex).toBe(5)
     expect(state.recentTraces[0].text).toBe('run smoke test')
+    expect(state.recentTraces[0].worktreeId).toBe('session-a')
+    expect(state.recentTraces[0].delivered).toBe(true)
   })
 
   it('closes modal when Escape key is pressed', () => {
@@ -112,7 +121,8 @@ describe('A2ADispatchHub', () => {
     const simBtn = screen.getByText('示範')
     fireEvent.click(simBtn)
 
-    expect(useA2AStore.getState().recentTraces.length).toBeGreaterThanOrEqual(1)
+    expect(useA2AStore.getState().recentTraces).toHaveLength(0)
+    expect(useA2AStore.getState().activeLinks).toHaveLength(0)
     vi.useRealTimers()
   })
 })

@@ -3216,7 +3216,9 @@
             "failedTitle": "Terminal exited",
             "failedDetail": "The shell process ended with exit code {{code}}. Its output is preserved.",
             "close": "Close",
-            "restart": "Restart"
+            "restart": "Restart",
+            "resume": "Resume",
+            "rerun": "Rerun"
           },
           "TerminalPane": {
             "ac112e9036": "Remove title",
@@ -5439,7 +5441,9 @@
           "keepDefaultBranch": "Except default branch",
           "keepDefaultBranchAria": "Keep the default branch visible while hiding sleeping workspaces",
           "otherClients": "Hide other-client workspaces",
-          "otherClientsAria": "Hide workspaces created from other Orca clients on shared remote servers"
+          "otherClientsAria": "Hide workspaces created from other Orca clients on shared remote servers",
+          "autoRemoveIdle": "Auto-remove after 1h idle",
+          "autoRemoveIdleAria": "Remove clean, unpinned workspaces with no terminal, browser, or agent activity for an hour"
         },
         "sidebarHostOptions": {
           "3e102f111c": "All hosts",
@@ -6364,6 +6368,16 @@
           "architectureMismatch": "A Git-related executable could not run because its CPU architecture is incompatible with this execution host. Install Git and related tools for the host architecture.",
           "copyCommand": "Copy command",
           "copyDiagnostics": "Copy diagnostics"
+        },
+        "collapseModeRail": "Collapse mode: Icon Rail",
+        "collapseModeHidden": "Collapse mode: Completely Hidden",
+        "ProjectIconRail": {
+          "running": "Running ({{count}} active)",
+          "completed": "Completed ({{count}} unread)",
+          "idle": "Idle",
+          "workspacesCount": "{{count}} workspace(s)",
+          "expand": "Expand sidebar",
+          "settings": "Settings"
         }
       },
       "shared": {

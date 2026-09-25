@@ -50,16 +50,61 @@ export function findTerminalPane(tabId: string): HTMLElement | null {
   }, null)
 }
 
-export function findTerminalElement(targetIndex?: number, targetName?: string): Element | null {
+export function findTerminalTabTitle(
+  targetIndex?: number,
+  targetName?: string,
+  worktreeId?: string
+): string | null {
+  if (typeof document === 'undefined') {
+    return null
+  }
+  const cleanTargetName = targetName?.replace(/^[@#]/, '')
+  const selector = worktreeId
+    ? sessionTerminalTabSelector(worktreeId)
+    : '[data-tab-id][data-terminal-index]'
+  let tabRoots = Array.from(document.querySelectorAll<HTMLElement>(selector))
+  if (tabRoots.length === 0 && worktreeId) {
+    tabRoots = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-tab-id][data-terminal-index]')
+    )
+  }
+  const match = tabRoots.find((el) => {
+    if (targetIndex !== undefined) {
+      return el.dataset.terminalIndex === String(targetIndex)
+    }
+    return Boolean(cleanTargetName) && el.dataset.terminalIndex === cleanTargetName
+  })
+  return match?.dataset.tabTitle?.trim() || null
+}
+
+/** Tabs that carry a worktree-scoped @index. The same number exists in every session. */
+export function sessionTerminalTabSelector(worktreeId: string, index?: number): string {
+  const scope = `[data-worktree-id="${CSS.escape(worktreeId)}"]`
+  const indexAttr =
+    index === undefined ? '[data-terminal-index]' : `[data-terminal-index="${index}"]`
+  return `${scope} [data-tab-id]${indexAttr}, ${scope}[data-tab-id]${indexAttr}`
+}
+
+export function findTerminalElement(
+  targetIndex?: number,
+  targetName?: string,
+  worktreeId?: string
+): Element | null {
   if (typeof document === 'undefined') {
     return null
   }
 
   try {
     const cleanTargetName = targetName?.replace(/^[@#]/, '')
-    const tabRoots = Array.from(
-      document.querySelectorAll<HTMLElement>('[data-tab-id][data-terminal-index]')
-    )
+    const selector = worktreeId
+      ? sessionTerminalTabSelector(worktreeId)
+      : '[data-tab-id][data-terminal-index]'
+    let tabRoots = Array.from(document.querySelectorAll<HTMLElement>(selector))
+    if (tabRoots.length === 0 && worktreeId) {
+      tabRoots = Array.from(
+        document.querySelectorAll<HTMLElement>('[data-tab-id][data-terminal-index]')
+      )
+    }
     const matchesTarget = (el: HTMLElement): boolean => {
       if (targetIndex !== undefined && el.dataset.terminalIndex === String(targetIndex)) {
         return true
@@ -101,13 +146,46 @@ export function findTerminalElement(targetIndex?: number, targetName?: string): 
   return null
 }
 
-export function resolveLinkGeometries(activeLinks: A2ALinkEvent[]): ResolvedLinkGeometry[] {
+export function resolveLinkGeometries(
+  activeLinks: A2ALinkEvent[],
+  scopeWorktreeId?: string | null
+): ResolvedLinkGeometry[] {
   return activeLinks.map((link) => {
-    const elFrom = findTerminalElement(link.fromIndex, link.from)
-    const elTo = findTerminalElement(link.toIndex, link.to)
+    const inSession = !scopeWorktreeId || !link.worktreeId || link.worktreeId === scopeWorktreeId
+    const motif = getA2AConnectionMotif(
+      link,
+      findTerminalTabTitle(link.fromIndex, link.from, scopeWorktreeId ?? undefined)
+    )
+    if (!inSession) {
+      return {
+        link,
+        p1: null,
+        p2: null,
+        midX: 0,
+        midY: 0,
+        pathD: '',
+        isFallback: true,
+        motif
+      }
+    }
 
-    const p1 = resolvePointFromElement(elFrom)
-    const p2 = resolvePointFromElement(elTo)
+    const elFrom = findTerminalElement(link.fromIndex, link.from, scopeWorktreeId ?? undefined)
+    const elTo = findTerminalElement(link.toIndex, link.to, scopeWorktreeId ?? undefined)
+
+    let p1 = resolvePointFromElement(elFrom)
+    let p2 = resolvePointFromElement(elTo)
+
+    const isHumanSource =
+      link.from.toLowerCase() === '@human' ||
+      link.from.toLowerCase() === 'human' ||
+      link.from.toLowerCase() === 'orca-cli' ||
+      link.from.toLowerCase() === 'caller'
+
+    if (!p1 && isHumanSource && typeof window !== 'undefined') {
+      const w = window.innerWidth || 800
+      const h = window.innerHeight || 600
+      p1 = { x: w / 2, y: h - 25 }
+    }
 
     // Zero Phantom Beam: never draw bezier arcs to arbitrary empty space
     if (!p1 || !p2) {
@@ -119,7 +197,7 @@ export function resolveLinkGeometries(activeLinks: A2ALinkEvent[]): ResolvedLink
         midY: p1 ? p1.y + 28 : p2 ? p2.y + 28 : 0,
         pathD: '',
         isFallback: true,
-        motif: getA2AConnectionMotif(link)
+        motif
       }
     }
 
@@ -140,7 +218,7 @@ export function resolveLinkGeometries(activeLinks: A2ALinkEvent[]): ResolvedLink
         midY: p1.y - 65,
         pathD,
         isFallback: false,
-        motif: getA2AConnectionMotif(link)
+        motif
       }
     }
 
@@ -176,7 +254,7 @@ export function resolveLinkGeometries(activeLinks: A2ALinkEvent[]): ResolvedLink
       midY,
       pathD,
       isFallback: false,
-      motif: getA2AConnectionMotif(link)
+      motif
     }
   })
 }

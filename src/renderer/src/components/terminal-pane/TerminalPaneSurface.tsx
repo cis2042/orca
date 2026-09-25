@@ -1,3 +1,8 @@
+import { cn } from '@/lib/utils'
+import {
+  resolveShuGeneralPaneAura,
+  SHU_GENERAL_PANE_AURA_CLASS
+} from '../a2a/shu-general-pane-aura'
 import { createPortal } from 'react-dom'
 import TerminalSearch from '@/components/TerminalSearch'
 import { DaemonActionDialog } from '@/components/shared/useDaemonActions'
@@ -118,24 +123,38 @@ export function TerminalPaneSurface({
     const tabs = state.tabsByWorktree[worktreeId]
     return tabs?.find((t) => t.id === tabId)?.color ?? null
   })
+  const tabCustomTitle = useAppStore((state) => {
+    const tabs = state.tabsByWorktree[worktreeId]
+    return tabs?.find((t) => t.id === tabId)?.customTitle ?? null
+  })
+  const tabTitle = useAppStore((state) => {
+    const tabs = state.tabsByWorktree[worktreeId]
+    return tabs?.find((t) => t.id === tabId)?.title ?? null
+  })
+  const generalAura = resolveShuGeneralPaneAura(tabCustomTitle, tabTitle)
 
   return (
     <>
       <div
         ref={setContainerRef}
-        className="absolute inset-0 min-h-0 min-w-0 transition-[box-shadow] duration-200"
+        className={cn(
+          'absolute inset-0 min-h-0 min-w-0 transition-[box-shadow] duration-200',
+          generalAura && SHU_GENERAL_PANE_AURA_CLASS
+        )}
         data-native-file-drop-target="terminal"
         data-terminal-tab-id={tabId}
+        data-general-banner={generalAura?.general}
         data-terminal-chat-view={effectiveChatViewMode && activePaneIsChatLeaf ? 'true' : undefined}
         data-terminal-layout-leaf-ids={expectedLayoutLeafIdsAttr}
         data-pane-title-surface={titleUsesLightSurface ? 'light' : 'dark'}
         style={{
           ...terminalContainerStyle,
-          ...(tabColor
+          ...(tabColor && !generalAura
             ? {
                 boxShadow: `inset 0 0 0 2px ${tabColor}, inset 0 0 16px color-mix(in srgb, ${tabColor} 20%, transparent)`
               }
-            : {})
+            : {}),
+          ...generalAura?.style
         }}
         onContextMenuCapture={contextMenu.onContextMenuCapture}
         onMouseDownCapture={handlePrimarySelectionMiddleMouseDown}

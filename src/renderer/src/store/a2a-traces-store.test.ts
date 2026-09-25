@@ -16,7 +16,8 @@ describe('a2a-traces-store', () => {
       from: '@2',
       to: '@5',
       type: 'send',
-      text: 'npm test'
+      text: 'npm test',
+      delivered: true
     })
 
     expect(trace.fromIndex).toBe(2)
@@ -34,7 +35,8 @@ describe('a2a-traces-store', () => {
     const trace = useA2AStore.getState().addTrace({
       from: '@2',
       to: '@8',
-      durationMs: 3000
+      durationMs: 3000,
+      delivered: true
     })
 
     expect(useA2AStore.getState().activeLinks).toHaveLength(1)
@@ -54,7 +56,8 @@ describe('a2a-traces-store', () => {
       from: '@2',
       to: '@5',
       text: 'build',
-      durationMs: 1000
+      durationMs: 1000,
+      delivered: true
     })
 
     vi.advanceTimersByTime(1100)
@@ -69,7 +72,8 @@ describe('a2a-traces-store', () => {
   it('manually removes active link and clears traces', () => {
     const trace = useA2AStore.getState().addTrace({
       from: '@1',
-      to: '@2'
+      to: '@2',
+      delivered: true
     })
 
     expect(useA2AStore.getState().activeLinks).toHaveLength(1)
@@ -77,6 +81,17 @@ describe('a2a-traces-store', () => {
     expect(useA2AStore.getState().activeLinks).toHaveLength(0)
 
     useA2AStore.getState().clearTraces()
+    expect(useA2AStore.getState().recentTraces).toHaveLength(0)
+  })
+
+  it('ignores a trace that failed', () => {
+    useA2AStore.getState().addTrace({
+      from: '@1',
+      to: '@2',
+      text: 'missed',
+      executionState: 'failed'
+    })
+    expect(useA2AStore.getState().activeLinks).toHaveLength(0)
     expect(useA2AStore.getState().recentTraces).toHaveLength(0)
   })
 })

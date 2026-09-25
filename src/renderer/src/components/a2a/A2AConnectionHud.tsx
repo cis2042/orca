@@ -152,6 +152,57 @@ export function A2AConnectionHud({
                 🌪️ 旋風
               </button>
             </div>
+            <div className="flex flex-wrap items-center gap-1 pt-1 border-t border-a2a-flow/10">
+              <span className="text-[9px] text-muted-foreground shrink-0">蜀將光束:</span>
+              <button
+                type="button"
+                onClick={() => onTestTrigger('@2', '@5', '關羽令：青龍出鞘 🌿')}
+                title="關羽 · 綠葉藤蔓"
+                className="rounded border border-a2a-leaf/40 bg-a2a-leaf/15 px-1.5 py-0.5 text-[10px] font-medium text-a2a-leaf hover:bg-a2a-leaf/25 transition-colors"
+              >
+                關羽
+              </button>
+              <button
+                type="button"
+                onClick={() => onTestTrigger('@2', '@5', '趙雲令：白光破陣 🌙')}
+                title="趙雲 · 白光"
+                className="rounded border border-a2a-moonlight/40 bg-a2a-moonlight/15 px-1.5 py-0.5 text-[10px] font-medium text-a2a-moonlight hover:bg-a2a-moonlight/25 transition-colors"
+              >
+                趙雲
+              </button>
+              <button
+                type="button"
+                onClick={() => onTestTrigger('@2', '@5', '馬超令：金鎗突進 ⚜️')}
+                title="馬超 · 金光"
+                className="rounded border border-a2a-gold/40 bg-a2a-gold/15 px-1.5 py-0.5 text-[10px] font-medium text-a2a-gold hover:bg-a2a-gold/25 transition-colors"
+              >
+                馬超
+              </button>
+              <button
+                type="button"
+                onClick={() => onTestTrigger('@2', '@5', '姜維令：櫻雨佈陣 🌸')}
+                title="姜維 · 粉櫻"
+                className="rounded border border-a2a-blossom/40 bg-a2a-blossom/15 px-1.5 py-0.5 text-[10px] font-medium text-a2a-blossom hover:bg-a2a-blossom/25 transition-colors"
+              >
+                姜維
+              </button>
+              <button
+                type="button"
+                onClick={() => onTestTrigger('@2', '@5', '魏延令：烈焰奇襲 🔥')}
+                title="魏延 · 烈焰"
+                className="rounded border border-a2a-flame/40 bg-a2a-flame/15 px-1.5 py-0.5 text-[10px] font-medium text-a2a-flame hover:bg-a2a-flame/25 transition-colors"
+              >
+                魏延
+              </button>
+              <button
+                type="button"
+                onClick={() => onTestTrigger('@2', '@5', '張飛令：紫電當陽 ⚡')}
+                title="張飛 · 紫電"
+                className="rounded border border-a2a-thunder/40 bg-a2a-thunder/15 px-1.5 py-0.5 text-[10px] font-medium text-a2a-thunder hover:bg-a2a-thunder/25 transition-colors"
+              >
+                張飛
+              </button>
+            </div>
           </div>
 
           {/* Recent Trace History List */}

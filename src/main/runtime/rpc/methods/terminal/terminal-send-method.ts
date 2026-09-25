@@ -38,13 +38,9 @@ export const TERMINAL_SEND_METHODS = [
     ) => {
       await assertTerminalSendTextWithinLimit(params.text)
       await assertTerminalSendTextWithinLimit(params.resolvedLaunchDraft?.text)
-      if (params.text) {
-        await assertLegacyAiVaultResumeCommandAllowed(params.text, () =>
-          runtime.ensureStructuredAgentSessionHost()
-        )
-      }
-      if (params.resolvedLaunchDraft?.text) {
-        await assertLegacyAiVaultResumeCommandAllowed(params.resolvedLaunchDraft.text, () =>
+      const resumeText = params.text || params.resolvedLaunchDraft?.text
+      if (resumeText) {
+        await assertLegacyAiVaultResumeCommandAllowed(resumeText, () =>
           runtime.ensureStructuredAgentSessionHost()
         )
       }
@@ -230,7 +226,10 @@ export const TERMINAL_SEND_METHODS = [
               {
                 text: params.text,
                 enter: params.enter === true,
-                interrupt: params.interrupt === true
+                interrupt: params.interrupt === true,
+                ...(params.expectedAgentSession
+                  ? { expectedAgentSession: params.expectedAgentSession }
+                  : {})
               },
               {
                 beforeWrite,
@@ -270,13 +269,7 @@ export const TERMINAL_SEND_METHODS = [
           }
         }
         if (isTerminalSendGuardNotWritable(error)) {
-          return {
-            send: {
-              handle: params.terminal,
-              accepted: false,
-              bytesWritten: 0
-            }
-          }
+          return { send: { handle: params.terminal, accepted: false, bytesWritten: 0 } }
         }
         throw error
       }

@@ -83,10 +83,12 @@ export async function emitA2ATrace(
     handle: string
     type: 'send' | 'message' | 'type' | 'keys'
     text?: string
+    worktree?: string
   }
 ): Promise<void> {
   const fromIndex = parseTerminalIndex(args.fromDisplay)
   const toIndex = parseTerminalIndex(args.targetDisplay)
+  const worktreeId = args.worktree ? args.worktree.replace(/^id:/, '') : undefined
   await client
     .call<{ ok: boolean; id: string }>('terminal.a2aLink', {
       from: args.fromDisplay,
@@ -95,7 +97,14 @@ export async function emitA2ATrace(
       toIndex,
       type: args.type,
       text: args.text,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      targetHandle: args.handle,
+      worktreeId,
+      // Why: the bridge already wrote via terminal.send. Dispatching here re-resolves @index
+      // and can paste into the session the user switched to.
+      dispatch: false,
+      delivered: true,
+      executionState: 'delivered'
     })
     .catch(() => {
       // Best effort trace emission
@@ -190,7 +199,7 @@ export const bridgeTraceHandler: CommandHandler = async (ctx) => {
   const text = getOptionalStringFlag(ctx.flags, 'text') ?? ctx.rawArgs?.slice(1).join(' ') ?? ''
   const customFrom = getOptionalStringFlag(ctx.flags, 'from')
   const typeFlag = getOptionalStringFlag(ctx.flags, 'type')
-  const { targetDisplay, worktree } = await resolveTargetAndHandle(target, ctx)
+  const { targetDisplay, worktree, handle } = await resolveTargetAndHandle(target, ctx)
 
   const sender = customFrom
     ? { from: customFrom, handle: 'custom', worktreeLabel: 'custom' }
@@ -211,7 +220,12 @@ export const bridgeTraceHandler: CommandHandler = async (ctx) => {
     toIndex,
     type: traceType,
     text: text || undefined,
-    timestamp: Date.now()
+    targetHandle: handle,
+    worktreeId: worktree ? worktree.replace(/^id:/, '') : undefined,
+    timestamp: Date.now(),
+    dispatch: false,
+    delivered: true,
+    executionState: 'delivered'
   })
 
   if (ctx.json) {
