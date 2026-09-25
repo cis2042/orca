@@ -158,6 +158,7 @@ describe('useBacklogSync', () => {
         to: '@2',
         toIndex: 2,
         dispatch: true,
+        worktreeId: mockWorktree.id,
         text: expect.stringContaining('PR #123')
       })
     )

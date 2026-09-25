@@ -206,6 +206,10 @@ export function useBacklogSync(): {
     async (item: BacklogItem, agentIndex: number): Promise<boolean> => {
       const target = `@${agentIndex}`
       const instruction = `[Backlog Task Assignment] 請接手處理項目: [${item.kind.toUpperCase()}] ${item.title}`
+      if (!activeWorktreeId) {
+        toast.error('A2A 派工只送到目前這個 Session。請先選取一個 Session。')
+        return false
+      }
 
       if (typeof window !== 'undefined' && window.api?.ui?.sendA2ALink) {
         try {
@@ -220,7 +224,8 @@ export function useBacklogSync(): {
             type: 'send',
             text: instruction,
             timestamp: Date.now(),
-            dispatch: true
+            dispatch: true,
+            worktreeId: activeWorktreeId
           }
           await window.api.ui.sendA2ALink(event)
           toast.success(`🟢 已將「${item.title}」派工給 ${target} PTY 執行！`)
@@ -234,7 +239,7 @@ export function useBacklogSync(): {
       toast.info(`已指派「${item.title}」至 ${target}`)
       return true
     },
-    []
+    [activeWorktreeId]
   )
 
   const combinedItems = useMemo(() => {

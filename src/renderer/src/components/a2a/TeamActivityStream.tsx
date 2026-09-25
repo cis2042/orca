@@ -11,7 +11,9 @@ import {
   Trash2
 } from 'lucide-react'
 import { useA2AStore } from '../../store/a2a-traces-store'
-import type { A2ALinkType } from '../../../../shared/terminal-a2a-link'
+import { useAppStore } from '../../store'
+import { a2aEventInSession, type A2ALinkType } from '../../../../shared/terminal-a2a-link'
+import { sessionTerminalTabSelector } from './a2a-geometry'
 import { A2ATelemetrySummary } from './A2ATelemetrySummary'
 import { formatA2AFrequency, summarizeA2AConnections } from './a2a-telemetry'
 
@@ -70,30 +72,41 @@ export function TeamActivityStream(): React.JSX.Element {
   const replayTrace = useA2AStore((s) => s.replayTrace)
   const clearTraces = useA2AStore((s) => s.clearTraces)
   const [filterText, setFilterText] = useState('')
+  const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
+  const sessionTraces = useMemo(
+    () => recentTraces.filter((trace) => a2aEventInSession(trace, activeWorktreeId)),
+    [recentTraces, activeWorktreeId]
+  )
 
   const telemetry = useMemo(
-    () => summarizeA2AConnections(recentTraces, activeLinks),
-    [recentTraces, activeLinks]
+    () =>
+      summarizeA2AConnections(
+        sessionTraces,
+        activeLinks.filter((link) => a2aEventInSession(link, activeWorktreeId))
+      ),
+    [sessionTraces, activeLinks, activeWorktreeId]
   )
 
   const filteredTraces = useMemo(() => {
     if (!filterText.trim()) {
-      return recentTraces
+      return sessionTraces
     }
     const q = filterText.toLowerCase()
-    return recentTraces.filter((t) => {
+    return sessionTraces.filter((t) => {
       const fromStr = `${t.from} ${t.fromIndex ?? ''}`.toLowerCase()
       const toStr = `${t.to} ${t.toIndex ?? ''}`.toLowerCase()
       const content = (t.text || '').toLowerCase()
       return fromStr.includes(q) || toStr.includes(q) || content.includes(q)
     })
-  }, [recentTraces, filterText])
+  }, [sessionTraces, filterText])
 
   const handleTakeControl = (index?: number) => {
     if (!index || typeof document === 'undefined') {
       return
     }
-    const targetTab = document.querySelector<HTMLElement>(`[data-terminal-index="${index}"]`)
+    const targetTab = activeWorktreeId
+      ? document.querySelector<HTMLElement>(sessionTerminalTabSelector(activeWorktreeId, index))
+      : null
     if (targetTab) {
       targetTab.click()
     }

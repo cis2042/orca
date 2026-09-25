@@ -2,6 +2,8 @@ import React, { useEffect } from 'react'
 import { Network, Activity, X, Bot, Radio, Sparkles, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 import { useA2AStore } from '../../store/a2a-traces-store'
+import { useAppStore } from '../../store'
+import { a2aEventInSession } from '../../../../shared/terminal-a2a-link'
 import { AgentTopologyGraph } from './AgentTopologyGraph'
 import { TeamActivityStream } from './TeamActivityStream'
 import { A2ACommanderBar } from './A2ACommanderBar'
@@ -23,6 +25,9 @@ export function A2ADispatchHub(): React.JSX.Element | null {
   const recentTraces = useA2AStore((s) => s.recentTraces)
   const activeLinks = useA2AStore((s) => s.activeLinks)
   const addTrace = useA2AStore((s) => s.addTrace)
+  const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
+  const sessionLinks = activeLinks.filter((link) => a2aEventInSession(link, activeWorktreeId))
+  const sessionTraces = recentTraces.filter((trace) => a2aEventInSession(trace, activeWorktreeId))
 
   // Close with Escape key
   useEffect(() => {
@@ -43,21 +48,28 @@ export function A2ADispatchHub(): React.JSX.Element | null {
   }
 
   const handleLiveProbe = async () => {
-    // Probe real terminals: send a lightweight verification command to @2 or @1
-    const trace = addTrace({
+    if (!activeWorktreeId) {
+      toast.warning('A2A 探針只送到目前這個 Session。請先選取一個 Session。')
+      return
+    }
+    const trace = {
+      id: `a2a-probe-${Date.now()}`,
       from: '@1',
       to: '@2',
       fromIndex: 1,
       toIndex: 2,
       fromLabel: 'Supervisor',
       toLabel: 'Worker',
-      type: 'send',
-      text: 'echo "[A2A Live Probe OK] connection verified at $(date +%H:%M:%S)"'
-    })
+      type: 'send' as const,
+      text: 'echo "[A2A Live Probe OK] connection verified at $(date +%H:%M:%S)"',
+      timestamp: Date.now(),
+      worktreeId: activeWorktreeId
+    }
     if (typeof window !== 'undefined' && window.api?.ui?.sendA2ALink) {
       try {
         const res = (await window.api.ui.sendA2ALink(trace)) as unknown as SendA2ALinkResult
         if (res?.delivered) {
+          addTrace({ ...trace, delivered: true, executionState: 'delivered' })
           toast.success('🟢 A2A 真實通訊探針已寫入 @2 PTY 並執行！')
         } else if (res?.error) {
           toast.warning(`⚠️ 探針已發送，但目標未就緒: ${res.error}`)
@@ -72,21 +84,7 @@ export function A2ADispatchHub(): React.JSX.Element | null {
   }
 
   const handleSimulateDemo = () => {
-    // Explicit demo animation for visual UI preview
-    const trace1 = addTrace({
-      from: '@1',
-      to: '@2',
-      fromIndex: 1,
-      toIndex: 2,
-      fromLabel: 'Supervisor',
-      toLabel: 'Worker',
-      type: 'send',
-      text: '# [DEMO ONLY] npm run build:features'
-    })
-    if (typeof window !== 'undefined' && window.api?.ui?.sendA2ALink) {
-      window.api.ui.sendA2ALink({ ...trace1, dispatch: false }).catch(() => {})
-    }
-    toast.info('🎬 正在播放多 Agent 拓撲動效示範（不寫入 PTY）')
+    toast.info('只有真的送達另一個終端，才會畫出大絕招。')
   }
 
   return (
@@ -115,13 +113,13 @@ export function A2ADispatchHub(): React.JSX.Element | null {
                 </span>
               </div>
               <p className="text-xs text-zinc-400 font-mono">
-                {activeLinks.length > 0 ? (
+                {sessionLinks.length > 0 ? (
                   <span className="text-emerald-400 flex items-center gap-1">
                     <Radio className="size-3 animate-pulse" />
-                    {activeLinks.length} 個通訊連線進行中
+                    {sessionLinks.length} 個通訊連線進行中
                   </span>
                 ) : (
-                  `${recentTraces.length} 筆通訊歷史記錄`
+                  `${sessionTraces.length} 筆通訊歷史記錄`
                 )}
               </p>
             </div>

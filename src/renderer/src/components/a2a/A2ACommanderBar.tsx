@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react'
 import { Zap, Users, Sparkles } from 'lucide-react'
 import { useA2AStore } from '../../store/a2a-traces-store'
+import { useAppStore } from '../../store'
 import { parseTerminalIndex } from '../../../../shared/terminal-a2a-link'
+import { sessionTerminalTabSelector } from './a2a-geometry'
 import { toast } from 'sonner'
 
 type SendA2ALinkResult = {
@@ -16,6 +18,7 @@ type SendA2ALinkResult = {
 export function A2ACommanderBar(): React.JSX.Element {
   const recentTraces = useA2AStore((s) => s.recentTraces)
   const addTrace = useA2AStore((s) => s.addTrace)
+  const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
   const [inputText, setInputText] = useState('')
   const [selectedTarget, setSelectedTarget] = useState<string>('@2')
 
@@ -24,8 +27,8 @@ export function A2ACommanderBar(): React.JSX.Element {
     const indexes = new Set<number>()
 
     // Check open tabs in DOM
-    if (typeof document !== 'undefined') {
-      document.querySelectorAll('[data-terminal-index]').forEach((el) => {
+    if (typeof document !== 'undefined' && activeWorktreeId) {
+      document.querySelectorAll(sessionTerminalTabSelector(activeWorktreeId)).forEach((el) => {
         const raw = el.getAttribute('data-terminal-index')
         const idx = raw ? Number.parseInt(raw, 10) : Number.NaN
         if (Number.isFinite(idx) && idx > 0) {
@@ -36,6 +39,9 @@ export function A2ACommanderBar(): React.JSX.Element {
 
     // Check traces
     recentTraces.forEach((t) => {
+      if (t.worktreeId && t.worktreeId !== activeWorktreeId) {
+        return
+      }
       if (t.toIndex) {
         indexes.add(t.toIndex)
       }
@@ -50,11 +56,15 @@ export function A2ACommanderBar(): React.JSX.Element {
 
     const sorted = Array.from(indexes).sort((a, b) => a - b)
     return ['@all', ...sorted.map((i) => `@${i}`)]
-  }, [recentTraces])
+  }, [recentTraces, activeWorktreeId])
 
   const handleDispatch = async () => {
     const trimmed = inputText.trim()
     if (!trimmed) {
+      return
+    }
+    if (!activeWorktreeId) {
+      toast.warning('A2A 指令只送到目前這個 Session。請先選取一個 Session。')
       return
     }
 
@@ -74,20 +84,24 @@ export function A2ACommanderBar(): React.JSX.Element {
       let deliveredCount = 0
       for (const t of numericTargets) {
         const toIdx = parseTerminalIndex(t)
-        const trace = addTrace({
+        const trace = {
+          id: `a2a-${Date.now()}-${t}`,
           from: '@human',
           to: t,
           fromIndex: 1,
           toIndex: toIdx,
           fromLabel: 'Commander',
           toLabel: `Agent ${t}`,
-          type: 'send',
-          text: command
-        })
+          type: 'send' as const,
+          text: command,
+          timestamp: Date.now(),
+          worktreeId: activeWorktreeId
+        }
         if (typeof window !== 'undefined' && window.api?.ui?.sendA2ALink) {
           try {
             const res = (await window.api.ui.sendA2ALink(trace)) as unknown as SendA2ALinkResult
             if (res?.delivered) {
+              addTrace({ ...trace, delivered: true, executionState: 'delivered' })
               deliveredCount++
             }
           } catch {
@@ -102,20 +116,24 @@ export function A2ACommanderBar(): React.JSX.Element {
       }
     } else {
       const toIdx = parseTerminalIndex(target)
-      const trace = addTrace({
+      const trace = {
+        id: `a2a-${Date.now()}-${target}`,
         from: '@human',
         to: target,
         fromIndex: 1,
         toIndex: toIdx,
         fromLabel: 'Commander',
         toLabel: `Agent ${target}`,
-        type: 'send',
-        text: command
-      })
+        type: 'send' as const,
+        text: command,
+        timestamp: Date.now(),
+        worktreeId: activeWorktreeId
+      }
       if (typeof window !== 'undefined' && window.api?.ui?.sendA2ALink) {
         try {
           const res = (await window.api.ui.sendA2ALink(trace)) as unknown as SendA2ALinkResult
           if (res?.delivered) {
+            addTrace({ ...trace, delivered: true, executionState: 'delivered' })
             toast.success(`🟢 指令已真實送達 ${target} PTY 並執行`)
           } else if (res?.error) {
             toast.warning(`⚠️ 送達 ${target} 失敗: ${res.error}`)

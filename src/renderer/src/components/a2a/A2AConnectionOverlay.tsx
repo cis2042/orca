@@ -2,9 +2,15 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { X, Send, MessageSquare } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useA2AStore } from '../../store/a2a-traces-store'
+import { useAppStore } from '../../store'
 import { A2AConnectionHud } from './A2AConnectionHud'
 import { A2AConnectionEffects, MOTIF_PALETTES } from './A2AConnectionEffects'
-import { resolveLinkGeometries, type ResolvedLinkGeometry, type Point } from './a2a-geometry'
+import {
+  resolveLinkGeometries,
+  sessionTerminalTabSelector,
+  type ResolvedLinkGeometry,
+  type Point
+} from './a2a-geometry'
 
 export function A2AConnectionOverlay(): React.JSX.Element | null {
   const activeLinks = useA2AStore((s) => s.activeLinks)
@@ -14,6 +20,7 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
   const clearTraces = useA2AStore((s) => s.clearTraces)
   const addTrace = useA2AStore((s) => s.addTrace)
   const setHubOpen = useA2AStore((s) => s.setHubOpen)
+  const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
 
   const [hudOpen, setHudOpen] = useState(false)
   const [, setLayoutRevision] = useState(0)
@@ -34,7 +41,13 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
     }
   }, [activeLinks.length])
 
-  const geometries: ResolvedLinkGeometry[] = resolveLinkGeometries(activeLinks)
+  const sessionLinks = activeLinks.filter(
+    (link) => !activeWorktreeId || !link.worktreeId || link.worktreeId === activeWorktreeId
+  )
+  const sessionTraces = recentTraces.filter(
+    (trace) => !activeWorktreeId || !trace.worktreeId || trace.worktreeId === activeWorktreeId
+  )
+  const geometries: ResolvedLinkGeometry[] = resolveLinkGeometries(sessionLinks, activeWorktreeId)
 
   const handleTestTrigger = useCallback(
     (from: string, to: string, text: string) => {
@@ -43,7 +56,10 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
 
       if (typeof document !== 'undefined') {
         const activeIndices: number[] = []
-        document.querySelectorAll<HTMLElement>('[data-terminal-index]').forEach((el) => {
+        const selector = activeWorktreeId
+          ? sessionTerminalTabSelector(activeWorktreeId)
+          : '[data-tab-id][data-terminal-index]'
+        document.querySelectorAll<HTMLElement>(selector).forEach((el) => {
           const val = Number.parseInt(el.dataset.terminalIndex || '', 10)
           if (!Number.isNaN(val) && !activeIndices.includes(val)) {
             activeIndices.push(val)
@@ -61,9 +77,13 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
           if (!fromExists) {
             resolvedFrom = `@${activeIndices[0]}`
           }
+          const currentFromIdx = Number.parseInt(resolvedFrom.replace(/^[@#]/, ''), 10)
           if (!toExists) {
-            resolvedTo = activeIndices.length > 1 ? `@${activeIndices[1]}` : resolvedFrom
+            const alternative = activeIndices.find((idx) => idx !== currentFromIdx)
+            resolvedTo = alternative !== undefined ? `@${alternative}` : resolvedFrom
           }
+        } else {
+          return
         }
       }
 
@@ -72,13 +92,16 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
         to: resolvedTo,
         type: 'send',
         text,
-        durationMs: 5000
+        durationMs: 5000,
+        delivered: true,
+        executionState: 'delivered',
+        ...(activeWorktreeId ? { worktreeId: activeWorktreeId } : {})
       })
     },
-    [addTrace]
+    [addTrace, activeWorktreeId]
   )
 
-  const hasAnyTrace = activeLinks.length > 0 || recentTraces.length > 0
+  const hasAnyTrace = sessionLinks.length > 0 || sessionTraces.length > 0
 
   return (
     <div
@@ -115,7 +138,7 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
               </linearGradient>
             ))}
 
-            <filter id="a2a-glow" x="-20%" y="-20%" width="140%" height="140%">
+            <filter id="a2a-glow" x="-60%" y="-60%" width="220%" height="220%">
               <feGaussianBlur stdDeviation="4" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
@@ -356,8 +379,8 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
       <A2AConnectionHud
         hudOpen={hudOpen}
         setHudOpen={setHudOpen}
-        activeLinks={activeLinks}
-        recentTraces={recentTraces}
+        activeLinks={sessionLinks}
+        recentTraces={sessionTraces}
         hasAnyTrace={hasAnyTrace}
         setHubOpen={setHubOpen}
         clearTraces={clearTraces}

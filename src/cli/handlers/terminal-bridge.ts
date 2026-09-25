@@ -114,7 +114,8 @@ export const bridgeTypeHandler: CommandHandler = async (ctx) => {
       targetDisplay: resolved.targetDisplay,
       handle: resolved.handle,
       type,
-      text: t
+      text: t,
+      worktree: resolved.worktree
     })
 
   if (resolved.isBrowser) {
@@ -159,7 +160,8 @@ export const bridgeSendHandler: CommandHandler = async (ctx) => {
       targetDisplay: resolved.targetDisplay,
       handle: resolved.handle,
       type,
-      text: t
+      text: t,
+      worktree: resolved.worktree
     })
 
   if (resolved.isBrowser) {
@@ -204,7 +206,8 @@ export const bridgeMessageHandler: CommandHandler = async (ctx) => {
       targetDisplay: resolved.targetDisplay,
       handle: resolved.handle,
       type,
-      text: t
+      text: t,
+      worktree: resolved.worktree
     })
 
   if (resolved.isBrowser) {
@@ -258,7 +261,8 @@ export const bridgeKeysHandler: CommandHandler = async (ctx) => {
       targetDisplay: resolved.targetDisplay,
       handle: resolved.handle,
       type,
-      text: t
+      text: t,
+      worktree: resolved.worktree
     })
 
   if (resolved.isBrowser) {
