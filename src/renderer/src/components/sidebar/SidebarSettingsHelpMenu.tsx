@@ -11,11 +11,13 @@ import {
   RotateCw,
   School,
   ScrollText,
-  Settings
+  Settings,
+  Zap
 } from 'lucide-react'
 import { toast } from 'sonner'
 import logo from '../../../../../resources/logo.svg'
 import { useAppStore } from '@/store'
+import { useA2AStore } from '../../store/a2a-traces-store'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -251,6 +253,16 @@ export function SidebarSettingsHelpMenu(): React.JSX.Element {
                 'auto.components.sidebar.SidebarSettingsHelpMenu.e565171a7c',
                 'Keyboard Shortcuts'
               )}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={() => {
+                useA2AStore.getState().setHubTab('demo')
+                useA2AStore.getState().setHubOpen(true)
+              }}
+            >
+              <Zap className="size-3.5 text-purple-400" />
+              <span className="font-medium text-purple-300">A2A 8-Agent Demo</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={handleOpenFeedback}>

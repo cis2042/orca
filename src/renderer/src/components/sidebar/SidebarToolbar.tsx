@@ -1,5 +1,5 @@
 import React from 'react'
-import { Kanban } from 'lucide-react'
+import { Kanban, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
@@ -7,6 +7,7 @@ import { ScrollToCurrentWorkspaceToolbarButton } from './ScrollToCurrentWorkspac
 import { SidebarSettingsHelpMenu } from './SidebarSettingsHelpMenu'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
+import { useA2AStore } from '../../store/a2a-traces-store'
 import { hasFeatureInteraction } from '../../../../shared/feature-interactions'
 
 const WORKSPACE_BOARD_MOVED_HINT_STORAGE_KEY = 'orca.workspaceBoardMovedHintSeen.v1'
@@ -74,6 +75,27 @@ const SidebarToolbar = React.memo(function SidebarToolbar({
       <div className="flex items-center justify-between border-t border-worktree-sidebar-border px-2 py-1.5">
         <div className="flex min-w-0 items-center gap-1">
           <SidebarSettingsHelpMenu />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                type="button"
+                aria-label="A2A 8-Agent Demo & Hub"
+                className="relative text-purple-400 hover:text-purple-300 hover:bg-purple-950/40"
+                onClick={() => {
+                  useA2AStore.getState().setHubTab('demo')
+                  useA2AStore.getState().setHubOpen(true)
+                }}
+              >
+                <Zap className="size-3.5 fill-purple-400/20 text-purple-400 animate-pulse" />
+                <span className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-cyan-400 ring-2 ring-background animate-ping" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={4}>
+              A2A 8-Agent Demo & Hub
+            </TooltipContent>
+          </Tooltip>
         </div>
         <div className="flex items-center gap-1">
           <ScrollToCurrentWorkspaceToolbarButton />
