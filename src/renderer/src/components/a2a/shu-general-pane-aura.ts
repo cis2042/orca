@@ -2,6 +2,7 @@ import { MOTIF_PALETTES } from './A2AConnectionEffects'
 import { resolveShuGeneralBanner, type ShuGeneral } from './shu-general-motifs'
 
 export const SHU_GENERAL_PANE_AURA_CLASS = 'terminal-pane-general-aura'
+export const SHU_GENERAL_PANE_AURA_WORKING_CLASS = 'terminal-pane-general-aura-working'
 
 export type ShuGeneralPaneAura = {
   general: ShuGeneral

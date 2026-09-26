@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { resolveShuGeneralPaneAura } from './shu-general-pane-aura'
+import {
+  resolveShuGeneralPaneAura,
+  SHU_GENERAL_PANE_AURA_CLASS,
+  SHU_GENERAL_PANE_AURA_WORKING_CLASS
+} from './shu-general-pane-aura'
 
 describe('resolveShuGeneralPaneAura', () => {
+  it('exports distinct general aura base and working classes', () => {
+    expect(SHU_GENERAL_PANE_AURA_CLASS).toBe('terminal-pane-general-aura')
+    expect(SHU_GENERAL_PANE_AURA_WORKING_CLASS).toBe('terminal-pane-general-aura-working')
+  })
+
   it('gives a general-titled pane that general colour', () => {
     const aura = resolveShuGeneralPaneAura('#2 趙雲 將軍')
     expect(aura?.general).toBe('趙雲')

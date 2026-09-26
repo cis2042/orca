@@ -1,8 +1,9 @@
 import { cn } from '@/lib/utils'
 import {
-  resolveShuGeneralPaneAura,
-  SHU_GENERAL_PANE_AURA_CLASS
+  SHU_GENERAL_PANE_AURA_CLASS,
+  SHU_GENERAL_PANE_AURA_WORKING_CLASS
 } from '../a2a/shu-general-pane-aura'
+import { useShuGeneralPaneAura } from './use-shu-general-pane-aura'
 import { createPortal } from 'react-dom'
 import TerminalSearch from '@/components/TerminalSearch'
 import { DaemonActionDialog } from '@/components/shared/useDaemonActions'
@@ -123,15 +124,7 @@ export function TerminalPaneSurface({
     const tabs = state.tabsByWorktree[worktreeId]
     return tabs?.find((t) => t.id === tabId)?.color ?? null
   })
-  const tabCustomTitle = useAppStore((state) => {
-    const tabs = state.tabsByWorktree[worktreeId]
-    return tabs?.find((t) => t.id === tabId)?.customTitle ?? null
-  })
-  const tabTitle = useAppStore((state) => {
-    const tabs = state.tabsByWorktree[worktreeId]
-    return tabs?.find((t) => t.id === tabId)?.title ?? null
-  })
-  const generalAura = resolveShuGeneralPaneAura(tabCustomTitle, tabTitle)
+  const { generalAura, isWorking: isGeneralWorking } = useShuGeneralPaneAura(worktreeId, tabId)
 
   return (
     <>
@@ -139,11 +132,13 @@ export function TerminalPaneSurface({
         ref={setContainerRef}
         className={cn(
           'absolute inset-0 min-h-0 min-w-0 transition-[box-shadow] duration-200',
-          generalAura && SHU_GENERAL_PANE_AURA_CLASS
+          generalAura && SHU_GENERAL_PANE_AURA_CLASS,
+          generalAura && isGeneralWorking && SHU_GENERAL_PANE_AURA_WORKING_CLASS
         )}
         data-native-file-drop-target="terminal"
         data-terminal-tab-id={tabId}
         data-general-banner={generalAura?.general}
+        data-general-working={generalAura ? (isGeneralWorking ? 'true' : 'false') : undefined}
         data-terminal-chat-view={effectiveChatViewMode && activePaneIsChatLeaf ? 'true' : undefined}
         data-terminal-layout-leaf-ids={expectedLayoutLeafIdsAttr}
         data-pane-title-surface={titleUsesLightSurface ? 'light' : 'dark'}

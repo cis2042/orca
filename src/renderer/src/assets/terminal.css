@@ -207,38 +207,47 @@
 
 .terminal-pane-general-aura {
   box-shadow:
-    inset 0 0 0 2px color-mix(in srgb, var(--general-aura) 90%, transparent),
-    inset 0 0 22px color-mix(in srgb, var(--general-aura) 30%, transparent),
-    0 0 18px color-mix(in srgb, var(--general-aura) 55%, transparent);
+    inset 0 0 0 1.5px color-mix(in srgb, var(--general-aura) 85%, transparent),
+    inset 0 0 14px color-mix(in srgb, var(--general-aura) 18%, transparent),
+    0 0 10px color-mix(in srgb, var(--general-aura) 28%, transparent);
+  transition: box-shadow 0.25s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.terminal-pane-general-aura.terminal-pane-general-aura-working,
+.terminal-pane-general-aura[data-general-working='true'] {
+  box-shadow:
+    inset 0 0 0 3px color-mix(in srgb, var(--general-aura) 95%, transparent),
+    inset 0 0 26px color-mix(in srgb, var(--general-aura) 36%, transparent),
+    0 0 22px color-mix(in srgb, var(--general-aura) 65%, transparent);
   animation: terminal-pane-general-aura-surge 1.15s cubic-bezier(0.2, 0.9, 0.3, 1) infinite;
 }
 
 @keyframes terminal-pane-general-aura-surge {
   0% {
     box-shadow:
-      inset 0 0 0 2px color-mix(in srgb, var(--general-aura) 80%, transparent),
-      inset 0 0 18px color-mix(in srgb, var(--general-aura) 24%, transparent),
-      0 0 12px color-mix(in srgb, var(--general-aura) 40%, transparent);
+      inset 0 0 0 3px color-mix(in srgb, var(--general-aura) 85%, transparent),
+      inset 0 0 20px color-mix(in srgb, var(--general-aura) 28%, transparent),
+      0 0 16px color-mix(in srgb, var(--general-aura) 45%, transparent);
   }
-  14% {
+  16% {
     box-shadow:
-      inset 0 0 0 3px var(--general-aura-core),
-      inset 0 0 44px color-mix(in srgb, var(--general-aura) 62%, transparent),
-      0 0 26px 4px color-mix(in srgb, var(--general-aura-core) 95%, transparent),
-      0 0 70px 12px color-mix(in srgb, var(--general-aura) 80%, transparent);
+      inset 0 0 0 4.5px var(--general-aura-core),
+      inset 0 0 48px color-mix(in srgb, var(--general-aura) 70%, transparent),
+      0 0 30px 6px color-mix(in srgb, var(--general-aura-core) 95%, transparent),
+      0 0 76px 16px color-mix(in srgb, var(--general-aura) 85%, transparent);
   }
-  46% {
+  48% {
     box-shadow:
-      inset 0 0 0 2px color-mix(in srgb, var(--general-aura) 92%, transparent),
-      inset 0 0 26px color-mix(in srgb, var(--general-aura) 36%, transparent),
-      0 0 22px 2px color-mix(in srgb, var(--general-aura) 70%, transparent),
-      0 0 46px 6px color-mix(in srgb, var(--general-aura) 45%, transparent);
+      inset 0 0 0 3.5px color-mix(in srgb, var(--general-aura) 95%, transparent),
+      inset 0 0 32px color-mix(in srgb, var(--general-aura) 42%, transparent),
+      0 0 24px 3px color-mix(in srgb, var(--general-aura) 75%, transparent),
+      0 0 52px 8px color-mix(in srgb, var(--general-aura) 55%, transparent);
   }
   100% {
     box-shadow:
-      inset 0 0 0 2px color-mix(in srgb, var(--general-aura) 80%, transparent),
-      inset 0 0 18px color-mix(in srgb, var(--general-aura) 24%, transparent),
-      0 0 12px color-mix(in srgb, var(--general-aura) 40%, transparent);
+      inset 0 0 0 3px color-mix(in srgb, var(--general-aura) 85%, transparent),
+      inset 0 0 20px color-mix(in srgb, var(--general-aura) 28%, transparent),
+      0 0 16px color-mix(in srgb, var(--general-aura) 45%, transparent);
   }
 }
 
@@ -248,26 +257,31 @@
   inset: 0;
   z-index: 30;
   pointer-events: none;
-  padding: 3px;
-  border-radius: 3px;
-  background: conic-gradient(
+  padding: 4px;
+  border-radius: 4px;
+  background: repeating-conic-gradient(
     from var(--general-aura-angle),
     transparent 0deg,
-    color-mix(in srgb, var(--general-aura) 55%, transparent) 40deg,
-    var(--general-aura-core) 62deg,
-    transparent 96deg,
-    transparent 180deg,
-    color-mix(in srgb, var(--general-aura) 55%, transparent) 220deg,
-    var(--general-aura-core) 242deg,
-    transparent 276deg,
-    transparent 360deg
+    transparent 8deg,
+    color-mix(in srgb, var(--general-aura) 35%, transparent) 12deg,
+    var(--general-aura-core) 18deg,
+    color-mix(in srgb, var(--general-aura) 65%, transparent) 24deg,
+    transparent 28deg,
+    transparent 45deg
   );
   mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
   mask-composite: exclude;
-  filter: drop-shadow(0 0 6px var(--general-aura));
-  animation: terminal-pane-general-aura-orbit 1.6s linear infinite;
+  filter: drop-shadow(0 0 8px var(--general-aura)) drop-shadow(0 0 2px var(--general-aura-core));
+  opacity: 0;
+  transition: opacity 0.25s ease-out;
+}
+
+.terminal-pane-general-aura.terminal-pane-general-aura-working::before,
+.terminal-pane-general-aura[data-general-working='true']::before {
+  opacity: 1;
+  animation: terminal-pane-general-aura-orbit 1.4s linear infinite;
 }
 
 @property --general-aura-angle {
@@ -316,6 +330,13 @@
   mask-composite: exclude;
   padding: 14px;
   filter: blur(3px);
+  opacity: 0;
+  transition: opacity 0.25s ease-out;
+}
+
+.terminal-pane-general-aura.terminal-pane-general-aura-working::after,
+.terminal-pane-general-aura[data-general-working='true']::after {
+  opacity: 1;
   animation: terminal-pane-general-aura-flare 0.36s steps(3, end) infinite alternate;
 }
 
@@ -337,7 +358,10 @@
 
   .terminal-pane-general-aura,
   .terminal-pane-general-aura::before,
-  .terminal-pane-general-aura::after {
+  .terminal-pane-general-aura::after,
+  .terminal-pane-general-aura.terminal-pane-general-aura-working,
+  .terminal-pane-general-aura.terminal-pane-general-aura-working::before,
+  .terminal-pane-general-aura.terminal-pane-general-aura-working::after {
     animation: none;
   }
 }
