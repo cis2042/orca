@@ -62,4 +62,13 @@ describe('a2a session geometry', () => {
       'session-b'
     )
   })
+
+  it('generates a graceful in-session fallback beam even when terminal panes are not rendered', () => {
+    appendTab(1, 'session-c', 50)
+    appendTab(2, 'session-c', 250)
+    const [result] = resolveLinkGeometries([link('session-c')], 'session-c')
+    expect(result.pathD).not.toBe('')
+    expect(result.p1).not.toBeNull()
+    expect(result.p2).not.toBeNull()
+  })
 })

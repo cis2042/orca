@@ -10,11 +10,11 @@ export type A2ATracesState = {
   activeLinks: A2ALinkEvent[]
   recentTraces: A2ALinkEvent[]
   isHubOpen: boolean
-  hubTab: 'topology' | 'stream'
+  hubTab: 'topology' | 'stream' | 'demo'
   selectedAgentIndex: number | null
   setHubOpen: (open: boolean) => void
   toggleHub: () => void
-  setHubTab: (tab: 'topology' | 'stream') => void
+  setHubTab: (tab: 'topology' | 'stream' | 'demo') => void
   setSelectedAgentIndex: (idx: number | null) => void
   addTrace: (trace: {
     id?: string

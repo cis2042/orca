@@ -113,16 +113,26 @@ describe('A2ADispatchHub', () => {
     expect(useA2AStore.getState().isHubOpen).toBe(false)
   })
 
-  it('triggers simulate team flow on button click', () => {
-    vi.useFakeTimers()
+  it('triggers 8-agent cinema demo mode on button click', () => {
     useA2AStore.getState().setHubOpen(true)
     render(<A2ADispatchHub />)
 
-    const simBtn = screen.getByText('示範')
+    const simBtn = screen.getByText('8-AI Demo')
     fireEvent.click(simBtn)
 
-    expect(useA2AStore.getState().recentTraces).toHaveLength(0)
-    expect(useA2AStore.getState().activeLinks).toHaveLength(0)
-    vi.useRealTimers()
+    expect(useA2AStore.getState().hubTab).toBe('demo')
+    expect(screen.getByTestId('a2a-cinema-demo')).toBeDefined()
+    expect(screen.getByText('OAGENT MULTI-AI COLLABORATIVE MESH')).toBeDefined()
+  })
+
+  it('switches to 8-agent demo view via tab button', () => {
+    useA2AStore.getState().setHubOpen(true)
+    render(<A2ADispatchHub />)
+
+    const demoTabBtn = screen.getByText('8-Agent 演示')
+    fireEvent.click(demoTabBtn)
+
+    expect(useA2AStore.getState().hubTab).toBe('demo')
+    expect(screen.getByTestId('a2a-cinema-demo')).toBeDefined()
   })
 })

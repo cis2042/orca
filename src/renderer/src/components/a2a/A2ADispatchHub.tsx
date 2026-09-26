@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { Network, Activity, X, Bot, Radio, Sparkles, Zap } from 'lucide-react'
+import { Network, Activity, X, Bot, Radio, Sparkles, Zap, Film } from 'lucide-react'
 import { toast } from 'sonner'
 import { useA2AStore } from '../../store/a2a-traces-store'
 import { useAppStore } from '../../store'
@@ -7,6 +7,7 @@ import { a2aEventInSession } from '../../../../shared/terminal-a2a-link'
 import { AgentTopologyGraph } from './AgentTopologyGraph'
 import { TeamActivityStream } from './TeamActivityStream'
 import { A2ACommanderBar } from './A2ACommanderBar'
+import { A2ACinemaDemo } from './A2ACinemaDemo'
 
 type SendA2ALinkResult = {
   ok?: boolean
@@ -84,7 +85,8 @@ export function A2ADispatchHub(): React.JSX.Element | null {
   }
 
   const handleSimulateDemo = () => {
-    toast.info('只有真的送達另一個終端，才會畫出大絕招。')
+    setHubTab('demo')
+    toast.success('🎬 啟動 8-Agent 五色光全息協同調度展示！')
   }
 
   return (
@@ -153,6 +155,18 @@ export function A2ADispatchHub(): React.JSX.Element | null {
                 <Activity className="size-3.5" />
                 <span>活動流</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setHubTab('demo')}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1 font-medium transition-all ${
+                  hubTab === 'demo'
+                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-sm ring-1 ring-violet-400'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <Film className="size-3.5 text-cyan-400" />
+                <span>8-Agent 演示</span>
+              </button>
             </div>
 
             {/* Real Live Probe */}
@@ -170,11 +184,14 @@ export function A2ADispatchHub(): React.JSX.Element | null {
             <button
               type="button"
               onClick={handleSimulateDemo}
-              className="flex items-center gap-1.5 rounded-lg border border-zinc-700/60 bg-zinc-800/40 px-2 py-1 text-xs font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
-              title="播放純視覺示範動效（不寫入終端）"
+              className="flex items-center gap-1.5 rounded-lg border border-violet-500/50 bg-violet-600/20 px-2.5 py-1 text-xs font-semibold text-violet-300 hover:bg-violet-600/30 transition-colors shadow-sm"
+              title="播放 8-Agent 五色光全息協同技術演示"
             >
-              <Sparkles className="size-3 text-zinc-400" />
-              <span>示範</span>
+              <Sparkles
+                className="size-3 text-cyan-400 animate-spin"
+                style={{ animationDuration: '4s' }}
+              />
+              <span>8-AI Demo</span>
             </button>
 
             {/* Close Button */}
@@ -190,11 +207,17 @@ export function A2ADispatchHub(): React.JSX.Element | null {
 
         {/* Content Body */}
         <div className="flex-1 overflow-hidden relative">
-          {hubTab === 'topology' ? <AgentTopologyGraph /> : <TeamActivityStream />}
+          {hubTab === 'topology' ? (
+            <AgentTopologyGraph />
+          ) : hubTab === 'stream' ? (
+            <TeamActivityStream />
+          ) : (
+            <A2ACinemaDemo onClose={() => setHubOpen(false)} isStandAloneModal />
+          )}
         </div>
 
-        {/* Commander Bar Footer */}
-        <A2ACommanderBar />
+        {/* Commander Bar Footer - only shown in topology/stream mode */}
+        {hubTab !== 'demo' && <A2ACommanderBar />}
       </div>
     </div>
   )

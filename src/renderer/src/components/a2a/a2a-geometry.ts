@@ -1,4 +1,4 @@
-import type { A2ALinkEvent } from '../../../../shared/terminal-a2a-link'
+import { parseTerminalIndex, type A2ALinkEvent } from '../../../../shared/terminal-a2a-link'
 import { getA2AConnectionMotif, type A2AConnectionMotif } from './A2AConnectionEffects'
 
 export type Point = { x: number; y: number }
@@ -12,6 +12,29 @@ export type ResolvedLinkGeometry = {
   pathD: string
   isFallback: boolean
   motif: A2AConnectionMotif
+}
+
+export function resolveSessionFallbackPoint(
+  targetIndex?: number,
+  targetName?: string
+): Point | null {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return null
+  }
+  const idx = targetIndex ?? parseTerminalIndex(targetName) ?? 1
+  const container =
+    document.querySelector<HTMLElement>('[data-terminal-container]') ??
+    document.querySelector<HTMLElement>('[data-worktree-view]') ??
+    document.body
+  const rect = container?.getBoundingClientRect()
+  const left = rect?.left ?? 0
+  const width = rect?.width || window.innerWidth || 800
+  const top = rect?.top ?? 0
+
+  const safeIdx = Math.max(1, Math.min(8, idx))
+  const x = left + Math.round((width * (safeIdx * 2 - 1)) / 16)
+  const y = top + 42
+  return { x, y }
 }
 
 export function hasUsableTerminalBounds(el: HTMLElement): boolean {
@@ -185,6 +208,20 @@ export function resolveLinkGeometries(
       const w = window.innerWidth || 800
       const h = window.innerHeight || 600
       p1 = { x: w / 2, y: h - 25 }
+    }
+
+    const hasSourceTab = Boolean(
+      findTerminalTabTitle(link.fromIndex, link.from, scopeWorktreeId ?? undefined)
+    )
+    const hasTargetTab = Boolean(
+      findTerminalTabTitle(link.toIndex, link.to, scopeWorktreeId ?? undefined)
+    )
+
+    if (!p1 && inSession && hasSourceTab) {
+      p1 = resolveSessionFallbackPoint(link.fromIndex, link.from)
+    }
+    if (!p2 && inSession && hasTargetTab) {
+      p2 = resolveSessionFallbackPoint(link.toIndex, link.to)
     }
 
     // Zero Phantom Beam: never draw bezier arcs to arbitrary empty space
