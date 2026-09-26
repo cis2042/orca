@@ -7,6 +7,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { computeProjectRailSummary, ProjectIconRail } from './ProjectIconRail'
 import type { Worktree } from '../../../../shared/worktree/types'
 import type { Repo } from '../../../../shared/repo-types'
+import type { ProjectGroup } from '../../../../shared/project-group-types'
 import type { WorktreeStatus } from '@/lib/worktree-status'
 
 const mocks = vi.hoisted(() => ({
@@ -14,6 +15,12 @@ const mocks = vi.hoisted(() => ({
   setActiveWorktree: vi.fn(),
   setSidebarOpen: vi.fn(),
   openSettingsPage: vi.fn(),
+  reorderRepos: vi.fn(),
+  moveProjectToGroup: vi.fn(),
+  updateProjectGroup: vi.fn(),
+  toggleCollapsedGroup: vi.fn(),
+  createProjectGroup: vi.fn(),
+  deleteProjectGroupWithContainedProjects: vi.fn(),
   allWorktrees: [] as Worktree[],
   statuses: new Map<string, WorktreeStatus>()
 }))
@@ -170,6 +177,10 @@ describe('ProjectIconRail UI', () => {
     mocks.setActiveWorktree.mockClear()
     mocks.setSidebarOpen.mockClear()
     mocks.openSettingsPage.mockClear()
+    mocks.reorderRepos.mockClear()
+    mocks.moveProjectToGroup.mockClear()
+    mocks.updateProjectGroup.mockClear()
+    mocks.toggleCollapsedGroup.mockClear()
 
     mocks.allWorktrees = worktrees
     mocks.statuses = new Map<string, WorktreeStatus>([
@@ -180,10 +191,18 @@ describe('ProjectIconRail UI', () => {
 
     mocks.state = {
       repos,
+      projectGroups: [] as ProjectGroup[],
+      collapsedGroups: new Set<string>(),
       activeWorktreeId: 'wt-3',
       setActiveWorktree: mocks.setActiveWorktree,
       setSidebarOpen: mocks.setSidebarOpen,
-      openSettingsPage: mocks.openSettingsPage
+      openSettingsPage: mocks.openSettingsPage,
+      reorderRepos: mocks.reorderRepos,
+      moveProjectToGroup: mocks.moveProjectToGroup,
+      updateProjectGroup: mocks.updateProjectGroup,
+      toggleCollapsedGroup: mocks.toggleCollapsedGroup,
+      createProjectGroup: mocks.createProjectGroup,
+      deleteProjectGroupWithContainedProjects: mocks.deleteProjectGroupWithContainedProjects
     }
   })
 
@@ -274,5 +293,179 @@ describe('ProjectIconRail UI', () => {
     })
 
     expect(mocks.setActiveWorktree).toHaveBeenCalledWith('wt-1')
+  })
+
+  it('renders projects grouped by project group when projectGroups are present', () => {
+    const projectGroups: ProjectGroup[] = [
+      {
+        id: 'group-a',
+        name: 'Backend Group',
+        color: '#3b82f6',
+        tabOrder: 0,
+        isCollapsed: false,
+        parentGroupId: null,
+        parentPath: null,
+        createdFrom: 'manual',
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      }
+    ]
+
+    const groupedRepos: Repo[] = [
+      { ...repos[0], projectGroupId: 'group-a', projectGroupOrder: 0 },
+      { ...repos[1], projectGroupId: 'group-a', projectGroupOrder: 1 },
+      { ...repos[2], projectGroupId: null } // ungrouped
+    ]
+
+    mocks.state = {
+      ...mocks.state,
+      repos: groupedRepos,
+      projectGroups
+    }
+
+    act(() => {
+      root?.render(
+        <TooltipProvider delayDuration={0}>
+          <ProjectIconRail />
+        </TooltipProvider>
+      )
+    })
+
+    const groupHeader = container?.querySelector('[data-project-rail-group="group-a"]')
+    expect(groupHeader).not.toBeNull()
+    expect(groupHeader?.getAttribute('data-project-rail-group-collapsed')).toBe('false')
+
+    // Both grouped items and ungrouped item exist
+    expect(container?.querySelector('[data-project-rail-item="repo-1"]')).not.toBeNull()
+    expect(container?.querySelector('[data-project-rail-item="repo-2"]')).not.toBeNull()
+    expect(container?.querySelector('[data-project-rail-item="repo-3"]')).not.toBeNull()
+  })
+
+  it('toggles group collapse when group header is clicked', () => {
+    const projectGroups: ProjectGroup[] = [
+      {
+        id: 'group-a',
+        name: 'Backend Group',
+        color: '#3b82f6',
+        tabOrder: 0,
+        isCollapsed: false,
+        parentGroupId: null,
+        parentPath: null,
+        createdFrom: 'manual',
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      }
+    ]
+
+    const groupedRepos: Repo[] = [{ ...repos[0], projectGroupId: 'group-a', projectGroupOrder: 0 }]
+
+    mocks.state = {
+      ...mocks.state,
+      repos: groupedRepos,
+      projectGroups
+    }
+
+    act(() => {
+      root?.render(
+        <TooltipProvider delayDuration={0}>
+          <ProjectIconRail />
+        </TooltipProvider>
+      )
+    })
+
+    const groupHeader = container?.querySelector(
+      '[data-project-rail-group="group-a"]'
+    ) as HTMLDivElement | null
+    expect(groupHeader).not.toBeNull()
+
+    act(() => {
+      groupHeader?.click()
+    })
+
+    expect(mocks.toggleCollapsedGroup).toHaveBeenCalledWith('project-group:group-a')
+  })
+
+  it('hides contained items when group is collapsed in collapsedGroups set', () => {
+    const projectGroups: ProjectGroup[] = [
+      {
+        id: 'group-a',
+        name: 'Backend Group',
+        color: '#3b82f6',
+        tabOrder: 0,
+        isCollapsed: false,
+        parentGroupId: null,
+        parentPath: null,
+        createdFrom: 'manual',
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      }
+    ]
+
+    const groupedRepos: Repo[] = [{ ...repos[0], projectGroupId: 'group-a', projectGroupOrder: 0 }]
+
+    mocks.state = {
+      ...mocks.state,
+      repos: groupedRepos,
+      projectGroups,
+      collapsedGroups: new Set(['project-group:group-a'])
+    }
+
+    act(() => {
+      root?.render(
+        <TooltipProvider delayDuration={0}>
+          <ProjectIconRail />
+        </TooltipProvider>
+      )
+    })
+
+    const groupHeader = container?.querySelector('[data-project-rail-group="group-a"]')
+    expect(groupHeader).not.toBeNull()
+    expect(groupHeader?.getAttribute('data-project-rail-group-collapsed')).toBe('true')
+
+    // Contained item is not rendered when collapsed
+    expect(container?.querySelector('[data-project-rail-item="repo-1"]')).toBeNull()
+  })
+
+  it('triggers reorderRepos on drag and drop between items', () => {
+    act(() => {
+      root?.render(
+        <TooltipProvider delayDuration={0}>
+          <ProjectIconRail />
+        </TooltipProvider>
+      )
+    })
+
+    const item1 = container?.querySelector('[data-project-rail-item="repo-1"]')
+    const item1Wrapper = item1?.closest('[draggable="true"]')
+    const item3 = container?.querySelector('[data-project-rail-item="repo-3"]')
+    const item3Wrapper = item3?.closest('[draggable="true"]')
+    expect(item1Wrapper).not.toBeNull()
+    expect(item3Wrapper).not.toBeNull()
+
+    const dataTransfer = {
+      setData: vi.fn(),
+      getData: vi.fn().mockReturnValue('repo-1'),
+      effectAllowed: 'move',
+      dropEffect: 'move'
+    }
+
+    act(() => {
+      const dragStartEvt = new Event('dragstart', { bubbles: true })
+      Object.defineProperty(dragStartEvt, 'dataTransfer', { value: dataTransfer })
+      item1Wrapper?.dispatchEvent(dragStartEvt)
+    })
+
+    act(() => {
+      const dragOverEvt = new Event('dragover', { bubbles: true })
+      Object.defineProperty(dragOverEvt, 'dataTransfer', { value: dataTransfer })
+      Object.defineProperty(dragOverEvt, 'clientY', { value: 100 })
+      item3Wrapper?.dispatchEvent(dragOverEvt)
+
+      const dropEvt = new Event('drop', { bubbles: true })
+      Object.defineProperty(dropEvt, 'dataTransfer', { value: dataTransfer })
+      item3Wrapper?.dispatchEvent(dropEvt)
+    })
+
+    expect(mocks.reorderRepos).toHaveBeenCalled()
   })
 })
