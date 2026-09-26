@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react'
-import { PanelLeftOpen, Settings } from 'lucide-react'
+import { PanelLeftOpen, Settings, Zap } from 'lucide-react'
+import { useA2AStore } from '@/store/a2a-traces-store'
 import { useAppStore } from '@/store'
 import { useAllWorktrees } from '@/store/selectors'
 import { useWorktreeActivityStatuses } from './use-worktree-activity-statuses'
@@ -342,8 +343,27 @@ export function ProjectIconRail(): React.JSX.Element {
         )}
       </div>
 
-      {/* Bottom Footer: Settings Button */}
+      {/* Bottom Footer: A2A Demo & Settings Buttons */}
       <div className="flex flex-col items-center gap-1 pt-1 shrink-0">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => {
+                useA2AStore.getState().setHubTab('demo')
+                useA2AStore.getState().setHubOpen(true)
+              }}
+              aria-label="A2A 8-Agent Mesh Demo"
+              className="text-violet-400 hover:text-violet-200 hover:bg-violet-950/40 relative group"
+            >
+              <Zap className="size-3.5 animate-pulse text-cyan-400" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={12}>
+            <span>A2A 8-Agent Demo &amp; Hub</span>
+          </TooltipContent>
+        </Tooltip>
         <div className="h-px w-6 bg-worktree-sidebar-border" />
         <Tooltip>
           <TooltipTrigger asChild>

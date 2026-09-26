@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
 import { A2ACinemaDemo } from './A2ACinemaDemo'

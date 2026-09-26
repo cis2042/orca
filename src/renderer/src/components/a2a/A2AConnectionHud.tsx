@@ -270,12 +270,12 @@ export function A2AConnectionHud({
             type="button"
             onClick={() => setHudOpen(true)}
             data-testid="a2a-hud-trigger"
-            className="flex items-center gap-1.5 rounded-full border border-a2a-flow/40 bg-a2a-canvas/90 px-2.5 py-1 text-xs font-mono text-a2a-flow shadow-floating backdrop-blur-md transition-all hover:scale-105 hover:bg-card"
+            className="flex items-center gap-1.5 rounded-full border border-violet-500/40 bg-zinc-950/90 px-3 py-1 text-xs font-mono text-violet-300 shadow-floating backdrop-blur-md transition-all hover:scale-105 hover:bg-zinc-900 ring-1 ring-violet-500/30"
           >
-            <Radio className="size-3 text-a2a-flow animate-pulse" />
-            <span>A2A Trace</span>
+            <Radio className="size-3 text-cyan-400 animate-pulse" />
+            <span>A2A Trace · 8-AI Demo</span>
             {activeLinks.length > 0 && (
-              <span className="rounded-full bg-a2a-target/20 px-1.5 py-0.2 text-[10px] font-bold text-a2a-target-soft">
+              <span className="rounded-full bg-violet-500/30 px-1.5 py-0.2 text-[10px] font-bold text-violet-200">
                 {activeLinks.length}
               </span>
             )}
@@ -283,10 +283,10 @@ export function A2AConnectionHud({
           <button
             type="button"
             onClick={() => setHubOpen(true)}
-            title="開啟視覺化調度中樞 (Grokbot Hub)"
-            className="flex size-6 items-center justify-center rounded-full border border-a2a-source/40 bg-a2a-source/15 text-a2a-source-soft shadow-md backdrop-blur-md transition-transform hover:scale-110 hover:bg-a2a-source/30"
+            title="開啟視覺化調度中樞與 8-Agent 展示 (Grokbot Hub)"
+            className="flex size-7 items-center justify-center rounded-full border border-violet-500/40 bg-violet-600/20 text-violet-300 shadow-md backdrop-blur-md transition-transform hover:scale-110 hover:bg-violet-600/40"
           >
-            <Maximize2 className="size-3" />
+            <Maximize2 className="size-3.5" />
           </button>
         </div>
       )}
