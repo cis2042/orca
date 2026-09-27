@@ -53,6 +53,21 @@ describe('tab create menu options', () => {
     ).toEqual(['new-browser'])
   })
 
+  it('matches clean terminal option when hasCleanTerminal is enabled', () => {
+    const options = buildTabCreateMenuOptions({
+      terminalOnly: false,
+      hasNewBrowser: false,
+      hasNewMarkdown: false,
+      hasOpenMarkdown: false,
+      hasSimulator: false,
+      simulatorIsGoTo: false,
+      hasCleanTerminal: true
+    })
+    expect(findMatchingTabCreateMenuOptions('clean', options).map((option) => option.id)).toEqual([
+      'new-clean-terminal'
+    ])
+  })
+
   it('keeps terminal and markdown results when client-impossible actions are omitted', () => {
     const options = buildTabCreateMenuOptions({
       terminalOnly: false,

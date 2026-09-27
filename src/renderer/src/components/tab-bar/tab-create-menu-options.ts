@@ -27,6 +27,7 @@ export type TabCreateMenuOptionsContext = {
   hasSimulator: boolean
   simulatorIsGoTo: boolean
   terminalOnly: boolean
+  hasCleanTerminal?: boolean
   windowsShellEntries?: readonly { label: string; shell: BuiltInWindowsTerminalShell }[]
 }
 
@@ -96,6 +97,17 @@ export function buildTabCreateMenuOptions(
         translate('auto.components.tab.bar.tab.create.menu.options.a094576900', 'new terminal'),
         translate('auto.components.tab.bar.tab.create.menu.options.4f23f4d01d', 'new shell')
       ]
+    })
+  }
+
+  if (context.hasCleanTerminal) {
+    const label = translate('auto.components.tab.bar.TabBar.newCleanTerminal', 'New Clean Terminal')
+    options.push({
+      id: 'new-clean-terminal',
+      kind: 'new-terminal-shell',
+      label,
+      shell: 'clean' as BuiltInWindowsTerminalShell,
+      keywords: ['clean', 'clean terminal', 'ghostty', 'minimal', 'quiet', 'hush']
     })
   }
 

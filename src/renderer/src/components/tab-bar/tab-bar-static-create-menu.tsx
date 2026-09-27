@@ -1,5 +1,5 @@
 import React from 'react'
-import { FilePlus, FileText, Globe, Smartphone, TerminalSquare } from 'lucide-react'
+import { FilePlus, FileText, Globe, Smartphone, Sparkles, TerminalSquare } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
 import { DropdownMenuItem, DropdownMenuShortcut } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -178,6 +178,21 @@ export function TabBarStaticCreateMenu({
       <MobileEmulatorTabIntroCallout />
     ) : null
 
+  const newCleanTerminalMenuItem = onNewTerminalWithShell ? (
+    <DropdownMenuItem
+      onSelect={() => {
+        queueNewActiveTerminalFocusAfterNewTabMenuClose()
+        onNewTerminalWithShell('clean')
+      }}
+      className="gap-2 rounded-[7px] px-2 py-1.5 text-[12px] leading-5 font-medium"
+    >
+      <Sparkles className="size-4 text-muted-foreground" />
+      <span className="flex-1">
+        {translate('auto.components.tab.bar.TabBar.newCleanTerminal', 'New Clean Terminal')}
+      </span>
+    </DropdownMenuItem>
+  ) : null
+
   return newTabMenuOrder === 'markdown-first' ? (
     <>
       {newMarkdownMenuItem}
@@ -185,6 +200,7 @@ export function TabBarStaticCreateMenu({
       {defaultTerminalMenuItems}
       {newBrowserMenuItem}
       {newSimulatorMenuItem}
+      {newCleanTerminalMenuItem}
       {mobileEmulatorIntroMenuBlock}
     </>
   ) : (
@@ -194,6 +210,7 @@ export function TabBarStaticCreateMenu({
       {newMarkdownMenuItem}
       {openMarkdownMenuItem}
       {newSimulatorMenuItem}
+      {newCleanTerminalMenuItem}
       {mobileEmulatorIntroMenuBlock}
     </>
   )

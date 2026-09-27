@@ -58,7 +58,17 @@ export async function spawnLocalPty(
     env: finalEnv
   })
 
-  // Why: the async macOS capability probe runs before node-pty exists.
+  if (process.platform === 'darwin') {
+    try {
+      const { homedir } = await import('node:os')
+      const { existsSync, writeFileSync } = await import('node:fs')
+      const { join } = await import('node:path')
+      const hushPath = join(homedir(), '.hushlogin')
+      if (!existsSync(hushPath)) {
+        writeFileSync(hushPath, '')
+      }
+    } catch {}
+  }
   await awaitCancelableLocalPtySpawn(id, prepareMacosTccLoginShell())
   if (args.signal?.aborted) {
     throw new Error('client_disconnected')

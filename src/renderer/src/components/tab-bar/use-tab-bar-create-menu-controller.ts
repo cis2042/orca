@@ -172,7 +172,8 @@ export function useTabBarCreateMenuController({
           mobileEmulatorEnabled &&
           mobileEmulatorCreationEnabled &&
           Boolean(onNewSimulatorTab),
-        simulatorIsGoTo: workspaceHasSimulatorTab
+        simulatorIsGoTo: workspaceHasSimulatorTab,
+        hasCleanTerminal: !terminalOnly && Boolean(onNewTerminalWithShell)
       }),
     [
       mobileEmulatorEnabled,
@@ -180,6 +181,7 @@ export function useTabBarCreateMenuController({
       mobileEmulatorCreationEnabled,
       onNewFileTab,
       onNewSimulatorTab,
+      onNewTerminalWithShell,
       onOpenFileTab,
       terminalOnly,
       windowsShellEntries,

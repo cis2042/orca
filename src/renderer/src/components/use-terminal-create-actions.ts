@@ -53,7 +53,7 @@ export function useTerminalCreateActions(controller: TerminalColdActivationContr
         void openNewTerminalTabInActiveWorkspace(targetGroupId)
         return
       }
-      const newTab = createTab(activeWorktreeId, undefined, shellOverride)
+      const newTab = createTab(activeWorktreeId, targetGroupId, shellOverride)
       setActiveTabType('terminal', activeWorktreeId)
       const state = useAppStore.getState()
       const currentTerminals = state.tabsByWorktree[activeWorktreeId] ?? []

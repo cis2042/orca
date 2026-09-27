@@ -53,6 +53,14 @@ export function buildLocalPtySpawnEnvironment(args: {
     }
   }
 
+  if (spawn.shellOverride === 'clean') {
+    spawnEnv.ORCA_CLEAN_TERMINAL = '1'
+    spawnEnv.PS1 = '❯ '
+    spawnEnv.PROMPT = '❯ '
+    spawnEnv.RPROMPT = ''
+    spawnEnv.RPS1 = ''
+  }
+
   if (!getOptions().buildSpawnEnv) {
     return spawnEnv
   }
