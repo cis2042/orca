@@ -27,6 +27,15 @@ describe('resolveShuGeneralBanner', () => {
     expect(resolveShuGeneralBanner({ text: '請回報給趙雲' })).toBeNull()
     expect(resolveShuGeneralBanner({ text: 'npm test' })).toBeNull()
   })
+
+  it('recognizes Guan Yu courtesy name and honorific aliases', () => {
+    expect(resolveShuGeneralBanner({ sourceTitle: '#2 關雲長 將軍' })?.general).toBe('關羽')
+    expect(resolveShuGeneralBanner({ sourceTitle: '雲長將軍' })?.general).toBe('關羽')
+    expect(resolveShuGeneralBanner({ sourceTitle: '關公' })?.general).toBe('關羽')
+    expect(resolveShuGeneralBanner({ sourceTitle: '漢壽亭侯' })?.general).toBe('關羽')
+    expect(resolveShuGeneralBanner({ fromLabel: 'yunchang-agent' })?.general).toBe('關羽')
+    expect(resolveShuGeneralBanner({ text: '雲長令：全軍推進' })?.motif).toBe('foliage')
+  })
 })
 
 describe('getA2AConnectionMotif', () => {

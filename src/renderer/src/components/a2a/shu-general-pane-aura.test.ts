@@ -25,6 +25,18 @@ describe('resolveShuGeneralPaneAura', () => {
     expect(resolveShuGeneralPaneAura(null, '✳ Order zhaoyun opus55')?.general).toBe('趙雲')
   })
 
+  it('resolves Guan Yu courtesy aliases and preserves referential identity', () => {
+    const aura1 = resolveShuGeneralPaneAura('雲長 將軍')
+    const aura2 = resolveShuGeneralPaneAura('關雲長')
+    expect(aura1?.general).toBe('關羽')
+    expect(aura2?.general).toBe('關羽')
+    expect(aura1).toBe(aura2)
+    expect(aura1?.style).toMatchObject({
+      '--general-aura': 'var(--a2a-leaf, #72ff5a)',
+      '--general-aura-core': 'var(--a2a-leaf-soft, #d5ff76)'
+    })
+  })
+
   it('leaves ordinary panes alone', () => {
     expect(resolveShuGeneralPaneAura('grok-pkg-3')).toBeNull()
     expect(resolveShuGeneralPaneAura(null)).toBeNull()

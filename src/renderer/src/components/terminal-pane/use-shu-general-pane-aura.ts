@@ -9,15 +9,18 @@ export function useShuGeneralPaneAura(
   generalAura: ShuGeneralPaneAura | null
   isWorking: boolean
 } {
-  const tabCustomTitle = useAppStore((state) => {
-    const tabs = state.tabsByWorktree[worktreeId]
-    return tabs?.find((t) => t.id === tabId)?.customTitle ?? null
+  const generalAura = useAppStore((state) => {
+    const tab = state.tabsByWorktree[worktreeId]?.find((t) => t.id === tabId)
+    const runtimeTitles = state.runtimePaneTitlesByTabId?.[tabId]
+    return resolveShuGeneralPaneAura(
+      tab?.customTitle,
+      tab?.defaultTitle,
+      tab?.title,
+      tab?.quickCommandLabel,
+      tab?.generatedTitle,
+      ...(runtimeTitles ? Object.values(runtimeTitles) : [])
+    )
   })
-  const tabTitle = useAppStore((state) => {
-    const tabs = state.tabsByWorktree[worktreeId]
-    return tabs?.find((t) => t.id === tabId)?.title ?? null
-  })
-  const generalAura = resolveShuGeneralPaneAura(tabCustomTitle, tabTitle)
   const isWorking = useAppStore((state) => {
     if (!generalAura) {
       return false

@@ -89,4 +89,73 @@ describe('useShuGeneralPaneAura', () => {
     expect(result.current.generalAura).toBeNull()
     expect(result.current.isWorking).toBe(false)
   })
+
+  it('retains Guan Yu aura when live title is overwritten during working status', () => {
+    useAppStore.setState({
+      tabsByWorktree: {
+        wt1: [
+          {
+            id: 'tab-guanyu',
+            worktreeId: 'wt1',
+            title: '* Thinking...',
+            defaultTitle: '關羽 將軍',
+            customTitle: null,
+            shellOverride: null,
+            launchAgent: 'claude'
+          } as unknown as TerminalTab
+        ]
+      },
+      ptyIdsByTabId: {
+        'tab-guanyu': ['pty-1']
+      },
+      agentStatusByPaneKey: {
+        'tab-guanyu:0': {
+          paneKey: 'tab-guanyu:0',
+          state: 'working',
+          updatedAt: Date.now(),
+          stateStartedAt: Date.now(),
+          prompt: 'Refactoring...'
+        } as unknown as AgentStatusEntry
+      },
+      runtimePaneTitlesByTabId: {}
+    })
+
+    const { result } = renderHook(() => useShuGeneralPaneAura('wt1', 'tab-guanyu'))
+    expect(result.current.generalAura?.general).toBe('關羽')
+    expect(result.current.isWorking).toBe(true)
+  })
+
+  it('identifies Guan Yu from courtesy name alias and flashes when working', () => {
+    useAppStore.setState({
+      tabsByWorktree: {
+        wt1: [
+          {
+            id: 'tab-yunchang',
+            worktreeId: 'wt1',
+            title: '雲長',
+            customTitle: null,
+            shellOverride: null,
+            launchAgent: null
+          } as unknown as TerminalTab
+        ]
+      },
+      ptyIdsByTabId: {
+        'tab-yunchang': ['pty-1']
+      },
+      agentStatusByPaneKey: {
+        'tab-yunchang:0': {
+          paneKey: 'tab-yunchang:0',
+          state: 'working',
+          updatedAt: Date.now(),
+          stateStartedAt: Date.now(),
+          prompt: 'Deploying...'
+        } as unknown as AgentStatusEntry
+      },
+      runtimePaneTitlesByTabId: {}
+    })
+
+    const { result } = renderHook(() => useShuGeneralPaneAura('wt1', 'tab-yunchang'))
+    expect(result.current.generalAura?.general).toBe('關羽')
+    expect(result.current.isWorking).toBe(true)
+  })
 })
