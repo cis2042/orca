@@ -1,28 +1,16 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { X, Send, MessageSquare } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useA2AStore } from '../../store/a2a-traces-store'
 import { useAppStore } from '../../store'
-import { A2AConnectionHud } from './A2AConnectionHud'
 import { A2AConnectionEffects, MOTIF_PALETTES } from './A2AConnectionEffects'
-import {
-  resolveLinkGeometries,
-  sessionTerminalTabSelector,
-  type ResolvedLinkGeometry,
-  type Point
-} from './a2a-geometry'
+import { resolveLinkGeometries, type ResolvedLinkGeometry, type Point } from './a2a-geometry'
 
 export function A2AConnectionOverlay(): React.JSX.Element | null {
   const activeLinks = useA2AStore((s) => s.activeLinks)
-  const recentTraces = useA2AStore((s) => s.recentTraces)
   const removeActiveLink = useA2AStore((s) => s.removeActiveLink)
-  const replayTrace = useA2AStore((s) => s.replayTrace)
-  const clearTraces = useA2AStore((s) => s.clearTraces)
-  const addTrace = useA2AStore((s) => s.addTrace)
-  const setHubOpen = useA2AStore((s) => s.setHubOpen)
   const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
 
-  const [hudOpen, setHudOpen] = useState(false)
   const [, setLayoutRevision] = useState(0)
 
   // Re-measure after pane movement, scrolling, and tab/workspace layout changes.
@@ -44,64 +32,7 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
   const sessionLinks = activeLinks.filter(
     (link) => !activeWorktreeId || !link.worktreeId || link.worktreeId === activeWorktreeId
   )
-  const sessionTraces = recentTraces.filter(
-    (trace) => !activeWorktreeId || !trace.worktreeId || trace.worktreeId === activeWorktreeId
-  )
   const geometries: ResolvedLinkGeometry[] = resolveLinkGeometries(sessionLinks, activeWorktreeId)
-
-  const handleTestTrigger = useCallback(
-    (from: string, to: string, text: string) => {
-      let resolvedFrom = from
-      let resolvedTo = to
-
-      if (typeof document !== 'undefined') {
-        const activeIndices: number[] = []
-        const selector = activeWorktreeId
-          ? sessionTerminalTabSelector(activeWorktreeId)
-          : '[data-tab-id][data-terminal-index]'
-        document.querySelectorAll<HTMLElement>(selector).forEach((el) => {
-          const val = Number.parseInt(el.dataset.terminalIndex || '', 10)
-          if (!Number.isNaN(val) && !activeIndices.includes(val)) {
-            activeIndices.push(val)
-          }
-        })
-
-        // If target from or to doesn't exist in DOM, dynamically anchor to currently visible terminal(s)
-        const fromIdx = Number.parseInt(from.replace(/^[@#]/, ''), 10)
-        const toIdx = Number.parseInt(to.replace(/^[@#]/, ''), 10)
-
-        const fromExists = Number.isFinite(fromIdx) && activeIndices.includes(fromIdx)
-        const toExists = Number.isFinite(toIdx) && activeIndices.includes(toIdx)
-
-        if (activeIndices.length > 0) {
-          if (!fromExists) {
-            resolvedFrom = `@${activeIndices[0]}`
-          }
-          const currentFromIdx = Number.parseInt(resolvedFrom.replace(/^[@#]/, ''), 10)
-          if (!toExists) {
-            const alternative = activeIndices.find((idx) => idx !== currentFromIdx)
-            resolvedTo = alternative !== undefined ? `@${alternative}` : resolvedFrom
-          }
-        } else {
-          return
-        }
-      }
-
-      addTrace({
-        from: resolvedFrom,
-        to: resolvedTo,
-        type: 'send',
-        text,
-        durationMs: 5000,
-        delivered: true,
-        executionState: 'delivered',
-        ...(activeWorktreeId ? { worktreeId: activeWorktreeId } : {})
-      })
-    },
-    [addTrace, activeWorktreeId]
-  )
-
-  const hasAnyTrace = sessionLinks.length > 0 || sessionTraces.length > 0
 
   return (
     <div
@@ -374,19 +305,6 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
             </button>
           </div>
         ))}
-
-      {/* Floating A2A HUD Trigger & History Widget (Bottom-Right) */}
-      <A2AConnectionHud
-        hudOpen={hudOpen}
-        setHudOpen={setHudOpen}
-        activeLinks={sessionLinks}
-        recentTraces={sessionTraces}
-        hasAnyTrace={hasAnyTrace}
-        setHubOpen={setHubOpen}
-        clearTraces={clearTraces}
-        replayTrace={replayTrace}
-        onTestTrigger={handleTestTrigger}
-      />
     </div>
   )
 }

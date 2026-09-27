@@ -462,33 +462,18 @@ describe('A2AConnectionOverlay', () => {
     document.body.removeChild(pane2)
   })
 
-  it('toggles HUD and can trigger test traces', () => {
+  it('keeps HUD widget unrendered while retaining connection beams and badges', () => {
     render(<A2AConnectionOverlay />)
 
-    // Initially no traces, trigger button shouldn't show
     expect(screen.queryByTestId('a2a-hud-trigger')).toBeNull()
+    expect(screen.queryByText('A2A 通訊軌跡 (Trace)')).toBeNull()
 
     act(() => {
       landTrace({ from: '@1', to: '@2' })
     })
 
-    const triggerBtn = screen.getByTestId('a2a-hud-trigger')
-    expect(triggerBtn).toBeDefined()
-
-    fireEvent.click(triggerBtn)
-    expect(screen.getByText('A2A 通訊軌跡 (Trace)')).toBeDefined()
-
-    // Click demo #2 ➔ #5 button
-    const demoBtn = screen.getByText('#2 ➔ #5')
-    fireEvent.click(demoBtn)
-
-    const state = useA2AStore.getState()
-    expect(state.activeLinks.some((link) => link.fromIndex === 2 && link.toIndex === 5)).toBe(false)
-
-    // Click Open Hub button
-    const openHubBtn = screen.getByTitle('展開完整 A2A 調度中樞 (Grokbot Hub)')
-    fireEvent.click(openHubBtn)
-    expect(useA2AStore.getState().isHubOpen).toBe(true)
+    expect(screen.queryByTestId('a2a-hud-trigger')).toBeNull()
+    expect(screen.queryByText('A2A 通訊軌跡 (Trace)')).toBeNull()
   })
 
   it('does not draw a delivery that belongs to another session', () => {
