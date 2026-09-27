@@ -10,7 +10,7 @@ import { translate } from '@/i18n/i18n'
 import { BROWSER_TERMINAL_LINK_ACTIONS_SETTINGS_TARGET_ID } from '@/lib/settings-navigation-types'
 import { useAppStore } from '@/store'
 import { isHtmlPathString } from '../browser-pane/navigate/browser-html-drag-resolver'
-import { absolutePathToFileUri } from '../editor/markdown-internal-links'
+import { openHtmlPreview, resolveHtmlPreview } from './link-action-html-resolver'
 import type { LinkAction, LinkActionRequest } from './link-action-request'
 
 type LinkActionPopoverProps<TRequest extends LinkActionRequest> = {
@@ -138,7 +138,7 @@ export function LinkActionPopover<TRequest extends LinkActionRequest>({
           onCloseAutoFocus={(event) => event.preventDefault()}
           onEscapeKeyDown={() => request.restoreFocus()}
         >
-          <div className="mb-0.5 flex items-center gap-1 overflow-hidden border-b border-border px-1.5 py-1 font-mono text-xs text-muted-foreground">
+          <div className="mb-0.5 flex items-center gap-1 overflow-hidden border-b border-border px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
             {isHtml ? (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -164,11 +164,9 @@ export function LinkActionPopover<TRequest extends LinkActionRequest>({
               draggable={isHtml}
               onDragStart={(e) => {
                 if (isHtml) {
+                  const resolved = resolveHtmlPreview(request.destination)
                   e.dataTransfer.setData('text/plain', request.destination)
-                  e.dataTransfer.setData(
-                    'text/uri-list',
-                    absolutePathToFileUri(request.destination)
-                  )
+                  e.dataTransfer.setData('text/uri-list', resolved?.url ?? request.destination)
                   e.dataTransfer.effectAllowed = 'copy'
                 }
               }}
@@ -214,16 +212,7 @@ export function LinkActionPopover<TRequest extends LinkActionRequest>({
             <Button
               className="h-8 w-full justify-start gap-1.5 px-1.5 text-[13px] font-medium text-violet-300 hover:text-violet-100 hover:bg-violet-950/40 has-[>svg]:px-1.5"
               variant="ghost"
-              onClick={() => {
-                onClose()
-                request.restoreFocus()
-                const store = useAppStore.getState()
-                const worktreeId = store.activeWorktreeId ?? ''
-                const fileUrl = absolutePathToFileUri(request.destination)
-                const title = request.destination.split(/[/\\]/).pop() || 'HTML Preview'
-                store.createBrowserTab(worktreeId, fileUrl, { title, activate: true })
-                toast.success(`🌐 已在內建瀏覽器開啟: ${title}`)
-              }}
+              onClick={() => openHtmlPreview(request, onClose)}
             >
               <MonitorPlay className="size-3.5 text-violet-400" />
               <span className="min-w-0 flex-1 truncate text-left">在內建瀏覽器預覽 HTML</span>
