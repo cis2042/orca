@@ -7,23 +7,21 @@ import {
   isAgentSessionPtyWriteRefusedError,
   reevaluateAgentSessionPtyWriteAdmission
 } from './agent-session-pty-write-admission'
+import type { AgentSessionPtyBinding } from './agent-session-pty-write-admission'
 import {
   agentSessionLeaseFixture,
   agentSessionRecordFixture
 } from './agent-session-record.test-fixture'
-import type { AgentSessionLease } from './agent-session-record'
-import type {
-  PersistedAgentSessionLease,
-  PersistedAgentSessionRecord
-} from './agent-session-legacy-handoff-lease'
+import type { AgentSessionLease, AgentSessionRecord } from './agent-session-record'
+import type { PersistedAgentSessionLease } from './agent-session-legacy-handoff-lease'
 import { AGENT_SESSION_RPC_ERROR_CODES } from './agent-session-host-authority'
 
-function bindingFor(lease: PersistedAgentSessionLease) {
+function bindingFor(lease: PersistedAgentSessionLease): AgentSessionPtyBinding {
   return {
     sessionId: lease.sessionId,
     record: agentSessionRecordFixture(
       lease as unknown as AgentSessionLease
-    ) as unknown as PersistedAgentSessionRecord
+    ) as unknown as AgentSessionRecord
   }
 }
 
