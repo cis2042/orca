@@ -84,6 +84,16 @@ async function main() {
           gateway.setPublicUrl(tunnelUrl)
           const publicShareUrl = `${tunnelUrl}/s/${gateway.sessionId}?token=${gateway.token}`
           const webhookUrl = `${tunnelUrl}/api/line/webhook`
+          if (options.lineChannelAccessToken) {
+            fetch('https://api.line.me/v2/bot/channel/webhook/endpoint', {
+              method: 'PUT',
+              headers: {
+                Authorization: `Bearer ${options.lineChannelAccessToken}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ endpoint: webhookUrl })
+            }).catch(() => {})
+          }
           console.log('\n🎉 公網分享專用安全連結已生成：')
           console.log(`🔗 網址: ${publicShareUrl}`)
           console.log(`🔐 密碼: ${gateway.password}`)
