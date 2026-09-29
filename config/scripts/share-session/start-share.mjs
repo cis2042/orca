@@ -1,13 +1,19 @@
 import { createShareGateway } from './server.mjs'
 import { spawn } from 'node:child_process'
 
+try {
+  process.loadEnvFile('.env.local')
+} catch {}
+
 function parseArgs() {
   const args = process.argv.slice(2)
   const options = {
     port: 3788,
     password: null,
     repos: [],
-    tunnel: false
+    tunnel: false,
+    lineChannelSecret: process.env.LINE_CHANNEL_SECRET || null,
+    lineChannelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN || null
   }
 
   for (let i = 0; i < args.length; i++) {
@@ -22,6 +28,10 @@ function parseArgs() {
       options.tunnel = true
     } else if (arg === '--twin3') {
       options.twin3 = true
+    } else if (arg === '--line-secret' && args[i + 1]) {
+      options.lineChannelSecret = args[++i]
+    } else if (arg === '--line-token' && args[i + 1]) {
+      options.lineChannelAccessToken = args[++i]
     }
   }
 
@@ -71,10 +81,13 @@ async function main() {
         const match = line.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/)
         if (match && !tunnelUrl) {
           tunnelUrl = match[0]
+          gateway.setPublicUrl(tunnelUrl)
           const publicShareUrl = `${tunnelUrl}/s/${gateway.sessionId}?token=${gateway.token}`
+          const webhookUrl = `${tunnelUrl}/api/line/webhook`
           console.log('\n🎉 公網分享專用安全連結已生成：')
           console.log(`🔗 網址: ${publicShareUrl}`)
           console.log(`🔐 密碼: ${gateway.password}`)
+          console.log(`📡 LINE Webhook: ${webhookUrl}`)
           console.log('====================================================\n')
         }
       })

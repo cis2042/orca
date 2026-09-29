@@ -15,8 +15,9 @@ export function createShareGateway(options = {}) {
 
   const activeAuthTokens = new Set()
   const lineBot = createLineBotHandler({
-    channelAccessToken: options.lineChannelAccessToken,
-    channelSecret: options.lineChannelSecret,
+    channelAccessToken:
+      options.lineChannelAccessToken || process.env.LINE_CHANNEL_ACCESS_TOKEN || '',
+    channelSecret: options.lineChannelSecret || process.env.LINE_CHANNEL_SECRET || '',
     boundRepos,
     baseUrl: options.baseUrl || `http://localhost:${port}`,
     sessionId,
@@ -336,6 +337,7 @@ export function createShareGateway(options = {}) {
     password,
     boundRepos,
     lineBot,
+    setPublicUrl: (url) => lineBot.setBaseUrl(url),
     listen: () => new Promise((resolve) => server.listen(port, () => resolve(port))),
     close: () => new Promise((resolve) => server.close(resolve))
   }

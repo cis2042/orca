@@ -2,11 +2,10 @@ import crypto from 'node:crypto'
 import { spawn, execSync } from 'node:child_process'
 
 export function createLineBotHandler(options = {}) {
-  const channelAccessToken =
-    options.channelAccessToken || process.env.LINE_CHANNEL_ACCESS_TOKEN || ''
-  const channelSecret = options.channelSecret || process.env.LINE_CHANNEL_SECRET || ''
+  let channelAccessToken = options.channelAccessToken || process.env.LINE_CHANNEL_ACCESS_TOKEN || ''
+  let channelSecret = options.channelSecret || process.env.LINE_CHANNEL_SECRET || ''
   const boundRepos = options.boundRepos || []
-  const baseUrl = options.baseUrl || 'http://localhost:3788'
+  let baseUrl = options.baseUrl || 'http://localhost:3788'
   const sessionId = options.sessionId || ''
   const sessionToken = options.sessionToken || ''
   const executor = options.executor || null
@@ -489,6 +488,9 @@ export function createLineBotHandler(options = {}) {
     handleWebhookEvent,
     getContext,
     getPushApiLogs: () => pushApiCallLogs,
-    getReplyApiLogs: () => replyApiCallLogs
+    getReplyApiLogs: () => replyApiCallLogs,
+    setBaseUrl: (url) => {
+      baseUrl = url
+    }
   }
 }
