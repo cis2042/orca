@@ -105,8 +105,7 @@ function main() {
     return
   }
 
-  // 確保工作區乾淨
-  const status = run('git status --porcelain')
+  const status = run('git status --porcelain --untracked-files=no')
   if (status.length > 0) {
     console.error(
       '[sync-upstream] ⚠️ 工作目錄有尚未 commit 的變更，請先 stash 或 commit 後再執行同步。'
@@ -144,9 +143,8 @@ function main() {
       }
     }
 
-    // 執行自動化測試初篩
     console.log(`[sync-upstream] 正在執行 A2A 核心組件驗證...`)
-    runPassthrough('npm test src/renderer/src/components/a2a')
+    runPassthrough('pnpm test src/renderer/src/components/a2a')
 
     // Commit merge
     run(`git commit -m "chore(sync): merge upstream release ${target} into ${currentBranch}"`)
