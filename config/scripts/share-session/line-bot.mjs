@@ -14,6 +14,14 @@ export function createLineBotHandler(options = {}) {
   const pushApiCallLogs = []
   const replyApiCallLogs = []
 
+  function stripAnsi(str) {
+    if (!str) {
+      return ''
+    }
+    const esc = String.fromCharCode(27)
+    return str.replaceAll(new RegExp(`${esc}\\[[0-9;]*[a-zA-Z]`, 'g'), '')
+  }
+
   function getContext(targetId) {
     if (!userContexts.has(targetId)) {
       userContexts.set(targetId, {
@@ -329,6 +337,12 @@ export function createLineBotHandler(options = {}) {
     const startTime = Date.now()
     executeTaskProcess(targetRepo, engine, prompt, (result) => {
       const durationSec = Math.round((Date.now() - startTime) / 1000)
+      const cleanOutput = stripAnsi(result.output).trim()
+      const displayOutput =
+        cleanOutput.length > 1500
+          ? `${cleanOutput.slice(0, 1400)}\n\n...（更多內容可點擊下方按鈕至 Web CLI 查看）`
+          : cleanOutput || '任務已順利完成'
+
       sendLinePush(targetId, [
         {
           type: 'flex',
@@ -349,7 +363,7 @@ export function createLineBotHandler(options = {}) {
                 },
                 {
                   type: 'text',
-                  text: `耗時: ${durationSec}s | 專案: ${repoName}`,
+                  text: `耗時: ${durationSec}s | 專案: ${repoName} | 引擎: ${engine}`,
                   size: 'xs',
                   color: '#8b949e',
                   margin: 'xs'
@@ -362,12 +376,32 @@ export function createLineBotHandler(options = {}) {
               contents: [
                 {
                   type: 'text',
-                  text: `變更摘要：\n${result.diffSummary || '無檔案變更'}`,
+                  text: '📝 回覆與執行結果：',
+                  weight: 'bold',
                   size: 'xs',
-                  color: '#e5e7eb',
+                  color: '#58a6ff'
+                },
+                {
+                  type: 'text',
+                  text: displayOutput,
+                  size: 'sm',
+                  color: '#f0f6fc',
                   wrap: true,
-                  fontFamily: 'monospace'
-                }
+                  margin: 'sm'
+                },
+                ...(result.diffSummary
+                  ? [
+                      {
+                        type: 'text',
+                        text: `\n📦 檔案變更：\n${result.diffSummary}`,
+                        size: 'xs',
+                        color: '#7ee787',
+                        wrap: true,
+                        fontFamily: 'monospace',
+                        margin: 'md'
+                      }
+                    ]
+                  : [])
               ]
             },
             footer: {
@@ -380,7 +414,7 @@ export function createLineBotHandler(options = {}) {
                   height: 'sm',
                   action: {
                     type: 'uri',
-                    label: '📜 查看完整 Diff 與終端日誌',
+                    label: '🖥️ 開啟 Web CLI（可選：手動控制）',
                     uri: liveCliUrl
                   }
                 }
@@ -419,12 +453,18 @@ export function createLineBotHandler(options = {}) {
         targetRepo,
         'gemini',
         `請針對以下架構方案進行代碼審查與邊緣案例補充：\n${res1.output.slice(-800)}`,
-        (_res2) => {
+        (res2) => {
           const durationSec = Math.round((Date.now() - startTime) / 1000)
+          const clean1 = stripAnsi(res1.output).trim()
+          const clean2 = stripAnsi(res2.output).trim()
+          const brief1 =
+            clean1.length > 500 ? `${clean1.slice(0, 480)}...` : clean1 || '架構規劃完成'
+          const brief2 =
+            clean2.length > 500 ? `${clean2.slice(0, 480)}...` : clean2 || '邊界審查通過'
           sendLinePush(targetId, [
             {
               type: 'text',
-              text: `⚖️【@1 與 @2 討論共識出爐】(耗時 ${durationSec}s)\n專案：${repoName}\n議題：${prompt}\n\n📝 結論精要：\n雙方已確認實作細節，@1 完成結構定義，@2 完成邊界防禦審核。\n\n🔗 完整討論與日誌請參閱：\n${liveCliUrl}`
+              text: `⚖️【@1 與 @2 討論共識出爐】(耗時 ${durationSec}s)\n專案：${repoName}\n議題：${prompt}\n\n🏛️ @1 Claude 方案：\n${brief1}\n\n🛡️ @2 Gemini 審查：\n${brief2}\n\n🔗 完整終端日誌 / 手動控制（選用）：\n${liveCliUrl}`
             }
           ])
         }
