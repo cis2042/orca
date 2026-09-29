@@ -150,6 +150,25 @@ export function createShareGateway(options = {}) {
       return
     }
 
+    if (pathname === '/api/line/notify-deploy' && req.method === 'POST') {
+      let body = ''
+      req.on('data', (chunk) => {
+        body += chunk
+      })
+      req.on('end', async () => {
+        try {
+          const payload = JSON.parse(body || '{}')
+          const result = await lineBot.sendDeployNotification(payload.to, payload)
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ ok: true, result }))
+        } catch (e) {
+          res.writeHead(500, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ ok: false, error: e.message }))
+        }
+      })
+      return
+    }
+
     if (pathname === '/api/line/simulate' && req.method === 'POST') {
       let body = ''
       req.on('data', (chunk) => {

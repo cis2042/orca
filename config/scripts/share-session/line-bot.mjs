@@ -126,6 +126,55 @@ export function createLineBotHandler(options = {}) {
     }
   }
 
+  function makeStandardQuickReplies(ctx, liveCliUrl) {
+    const aliasMap = {
+      'agent-id': 'xagent.id',
+      XHuman_ID: 'xhuman.id',
+      'twin3-sdk': 'twin3.sdk',
+      twin3_bitbee: 'bitbee'
+    }
+    const currentRepo = boundRepos[ctx?.currentRepoIndex || 0] || boundRepos[0]
+    const base = currentRepo.split('/').pop()
+    const repoName = aliasMap[base] || base
+    const currentModel = ctx?.currentModel || 'claude'
+
+    const items = [
+      {
+        type: 'action',
+        action: { type: 'message', label: `📦 專案(${repoName})`, text: '/project' }
+      },
+      {
+        type: 'action',
+        action: { type: 'message', label: `🤖 引擎(${currentModel})`, text: '/model' }
+      },
+      {
+        type: 'action',
+        action: { type: 'message', label: '⚡ @1 狀態', text: '@1 檢查專案健康度' }
+      },
+      {
+        type: 'action',
+        action: { type: 'message', label: '🤝 雙 Agent 協商', text: '@1 @2 討論 架構優化' }
+      },
+      {
+        type: 'action',
+        action: { type: 'message', label: '❓ 說明', text: '/help' }
+      }
+    ]
+    if (liveCliUrl) {
+      items.push({
+        type: 'action',
+        action: { type: 'uri', label: '🖥️ 手機 Web CLI', uri: liveCliUrl }
+      })
+    }
+    return { items }
+  }
+
+  function runTaskAsync(targetRepo, engine, prompt) {
+    return new Promise((resolve) => {
+      executeTaskProcess(targetRepo, engine, prompt, resolve)
+    })
+  }
+
   async function handleWebhookEvent(event) {
     if (event.type !== 'message' || event.message.type !== 'text') {
       return { handled: false }
@@ -143,11 +192,14 @@ export function createLineBotHandler(options = {}) {
       twin3_bitbee: 'bitbee'
     }
 
+    const liveCliUrl = `${baseUrl}/s/${sessionId}?token=${sessionToken}`
+
     if (text === '/help' || text === '說明' || text === 'help' || text === '/?') {
       await sendLineReply(replyToken, [
         {
           type: 'text',
-          text: `⚡ Twin3 多 Agent 協作指令清單：\n\n【專案切換】\n• /project 或 /repos：彈出圖示選單切換 4 大專案（xagent.id, xhuman.id, twin3.sdk, bitbee）\n\n【模型切換】\n• /model：彈出選單挑選具體模型\n• /claude、/gemini、/codex、/agy：快速切換服務引擎\n\n【多 Agent 指揮派工】\n• @1 <任務>：指派給 Agent 1（Claude Code 架構師）\n• @2 <任務>：指派給 Agent 2（Gemini 測試工程師）\n• @3 <任務>：指派給 Agent 3（Cursor Agent 執行者）\n• @1 @2 討論 <議題>：啟動雙 Agent 展開 A2A 交叉審查與協商\n\n【即時監控】\n• 任務啟動後可點擊卡片開啟「手機 Web CLI」觀看實時跑碼，完成時將自動推送成果摘要與變更 Diff。`
+          text: `⚡ Twin3 多 Agent 協作指令清單：\n\n【專案切換】\n• /project：切換 4 大專案（xagent.id, xhuman.id, twin3.sdk, bitbee）\n\n【模型切換】\n• /model：挑選模型引擎\n• /claude、/gemini、/codex、/agy：快速切換\n\n【多 Agent 指揮派工】\n• @1 <任務>：指派給 Agent 1（Claude Code 架構師）\n• @2 <任務>：指派給 Agent 2（Gemini 測試工程師）\n• @3 <任務>：指派給 Agent 3（Cursor Agent 執行者）\n• @1 @2 討論 <議題>：雙 Agent A2A 交叉審查\n\n【直接回覆】\n• 所有回答與成果直接在 LINE 訊息中呈現，可使用下方捷徑按鈕快速切換操作。`,
+          quickReply: makeStandardQuickReplies(ctx, liveCliUrl)
         }
       ])
       return { handled: true, action: 'show_help' }
@@ -173,7 +225,8 @@ export function createLineBotHandler(options = {}) {
         await sendLineReply(replyToken, [
           {
             type: 'text',
-            text: `🟢 已切換至專案：${name}\n路徑：${boundRepos[idx]}\n請直接輸入任務指示或使用 @1、@2 分派。`
+            text: `🟢 已切換至專案：${name}\n路徑：${boundRepos[idx]}\n請直接輸入任務指示或使用 @1、@2 分派。`,
+            quickReply: makeStandardQuickReplies(ctx, liveCliUrl)
           }
         ])
         return { handled: true, action: 'repo_set', repoIndex: idx }
@@ -197,7 +250,8 @@ export function createLineBotHandler(options = {}) {
       await sendLineReply(replyToken, [
         {
           type: 'text',
-          text: `🤖 已切換模型引擎為：${m}`
+          text: `🤖 已切換模型引擎為：${m}`,
+          quickReply: makeStandardQuickReplies(ctx, liveCliUrl)
         }
       ])
       return { handled: true, action: 'model_set', model: m }
@@ -205,22 +259,46 @@ export function createLineBotHandler(options = {}) {
 
     if (text === '/claude') {
       ctx.currentModel = 'claude'
-      await sendLineReply(replyToken, [{ type: 'text', text: '🤖 已切換為 Claude Code 引擎' }])
+      await sendLineReply(replyToken, [
+        {
+          type: 'text',
+          text: '🤖 已切換為 Claude Code 引擎',
+          quickReply: makeStandardQuickReplies(ctx, liveCliUrl)
+        }
+      ])
       return { handled: true }
     }
     if (text === '/gemini') {
       ctx.currentModel = 'gemini'
-      await sendLineReply(replyToken, [{ type: 'text', text: '🤖 已切換為 Gemini CLI 引擎' }])
+      await sendLineReply(replyToken, [
+        {
+          type: 'text',
+          text: '🤖 已切換為 Gemini CLI 引擎',
+          quickReply: makeStandardQuickReplies(ctx, liveCliUrl)
+        }
+      ])
       return { handled: true }
     }
     if (text === '/codex') {
       ctx.currentModel = 'codex'
-      await sendLineReply(replyToken, [{ type: 'text', text: '🤖 已切換為 Codex CLI 引擎' }])
+      await sendLineReply(replyToken, [
+        {
+          type: 'text',
+          text: '🤖 已切換為 Codex CLI 引擎',
+          quickReply: makeStandardQuickReplies(ctx, liveCliUrl)
+        }
+      ])
       return { handled: true }
     }
     if (text === '/agy') {
       ctx.currentModel = 'agent'
-      await sendLineReply(replyToken, [{ type: 'text', text: '🤖 已切換為 Cursor Agent 引擎' }])
+      await sendLineReply(replyToken, [
+        {
+          type: 'text',
+          text: '🤖 已切換為 Cursor Agent 引擎',
+          quickReply: makeStandardQuickReplies(ctx, liveCliUrl)
+        }
+      ])
       return { handled: true }
     }
 
@@ -260,7 +338,7 @@ export function createLineBotHandler(options = {}) {
   }
 
   async function startExecutionTask(targetId, replyToken, prompt, agentId, engine, ctx) {
-    const taskId = crypto.randomUUID().slice(0, 8)
+    const startTime = Date.now()
     const targetRepo = boundRepos[ctx.currentRepoIndex] || boundRepos[0]
     const base = targetRepo.split('/').pop()
     const aliasMap = {
@@ -272,10 +350,19 @@ export function createLineBotHandler(options = {}) {
     const repoName = aliasMap[base] || base
     const liveCliUrl = `${baseUrl}/s/${sessionId}?token=${sessionToken}`
 
+    const result = await runTaskAsync(targetRepo, engine, prompt)
+    const durationSec = Math.round((Date.now() - startTime) / 1000)
+    const cleanOutput = stripAnsi(result.output).trim()
+    const displayOutput =
+      cleanOutput.length > 1500
+        ? `${cleanOutput.slice(0, 1400)}\n\n...（更多內容可點擊下方按鈕至 Web CLI 查看）`
+        : cleanOutput || '任務已順利完成'
+
     await sendLineReply(replyToken, [
       {
         type: 'flex',
-        altText: `⚡ 任務啟動：${repoName} (${agentId})`,
+        altText: `🟢 ${repoName} (${agentId}) 成果回覆`,
+        quickReply: makeStandardQuickReplies(ctx, liveCliUrl),
         contents: {
           type: 'bubble',
           size: 'mega',
@@ -285,14 +372,14 @@ export function createLineBotHandler(options = {}) {
             contents: [
               {
                 type: 'text',
-                text: `⚡ 任務啟動 [${agentId}]`,
+                text: `🟢 任務完成 [${agentId}]`,
                 weight: 'bold',
-                color: '#58a6ff',
+                color: '#3fb950',
                 size: 'md'
               },
               {
                 type: 'text',
-                text: `📦 專案: ${repoName} | 🤖: ${engine}`,
+                text: `耗時: ${durationSec}s | 專案: ${repoName} | 引擎: ${engine}`,
                 size: 'xs',
                 color: '#8b949e',
                 margin: 'xs'
@@ -303,14 +390,34 @@ export function createLineBotHandler(options = {}) {
             type: 'box',
             layout: 'vertical',
             contents: [
-              { type: 'text', text: `指示：${prompt}`, size: 'sm', color: '#ffffff', wrap: true },
               {
                 type: 'text',
-                text: '🟡 執行中... 請稍候，完成後將主動推播結果。',
+                text: '📝 回覆與執行結果：',
+                weight: 'bold',
                 size: 'xs',
-                color: '#e3b341',
-                margin: 'md'
-              }
+                color: '#58a6ff'
+              },
+              {
+                type: 'text',
+                text: displayOutput,
+                size: 'sm',
+                color: '#f0f6fc',
+                wrap: true,
+                margin: 'sm'
+              },
+              ...(result.diffSummary
+                ? [
+                    {
+                      type: 'text',
+                      text: `\n📦 檔案變更：\n${result.diffSummary}`,
+                      size: 'xs',
+                      color: '#7ee787',
+                      wrap: true,
+                      fontFamily: 'monospace',
+                      margin: 'md'
+                    }
+                  ]
+                : [])
             ]
           },
           footer: {
@@ -319,12 +426,11 @@ export function createLineBotHandler(options = {}) {
             contents: [
               {
                 type: 'button',
-                style: 'primary',
-                color: '#238636',
+                style: 'secondary',
                 height: 'sm',
                 action: {
                   type: 'uri',
-                  label: '🖥️ 開啟即時 Web CLI 觀看',
+                  label: '🖥️ 開啟 Web CLI（可選：手動控制）',
                   uri: liveCliUrl
                 }
               }
@@ -334,101 +440,11 @@ export function createLineBotHandler(options = {}) {
       }
     ])
 
-    const startTime = Date.now()
-    executeTaskProcess(targetRepo, engine, prompt, (result) => {
-      const durationSec = Math.round((Date.now() - startTime) / 1000)
-      const cleanOutput = stripAnsi(result.output).trim()
-      const displayOutput =
-        cleanOutput.length > 1500
-          ? `${cleanOutput.slice(0, 1400)}\n\n...（更多內容可點擊下方按鈕至 Web CLI 查看）`
-          : cleanOutput || '任務已順利完成'
-
-      sendLinePush(targetId, [
-        {
-          type: 'flex',
-          altText: `🟢 任務完成：${repoName} (${agentId})`,
-          contents: {
-            type: 'bubble',
-            size: 'mega',
-            header: {
-              type: 'box',
-              layout: 'vertical',
-              contents: [
-                {
-                  type: 'text',
-                  text: `🟢 任務完成 [${agentId}]`,
-                  weight: 'bold',
-                  color: '#3fb950',
-                  size: 'md'
-                },
-                {
-                  type: 'text',
-                  text: `耗時: ${durationSec}s | 專案: ${repoName} | 引擎: ${engine}`,
-                  size: 'xs',
-                  color: '#8b949e',
-                  margin: 'xs'
-                }
-              ]
-            },
-            body: {
-              type: 'box',
-              layout: 'vertical',
-              contents: [
-                {
-                  type: 'text',
-                  text: '📝 回覆與執行結果：',
-                  weight: 'bold',
-                  size: 'xs',
-                  color: '#58a6ff'
-                },
-                {
-                  type: 'text',
-                  text: displayOutput,
-                  size: 'sm',
-                  color: '#f0f6fc',
-                  wrap: true,
-                  margin: 'sm'
-                },
-                ...(result.diffSummary
-                  ? [
-                      {
-                        type: 'text',
-                        text: `\n📦 檔案變更：\n${result.diffSummary}`,
-                        size: 'xs',
-                        color: '#7ee787',
-                        wrap: true,
-                        fontFamily: 'monospace',
-                        margin: 'md'
-                      }
-                    ]
-                  : [])
-              ]
-            },
-            footer: {
-              type: 'box',
-              layout: 'vertical',
-              contents: [
-                {
-                  type: 'button',
-                  style: 'secondary',
-                  height: 'sm',
-                  action: {
-                    type: 'uri',
-                    label: '🖥️ 開啟 Web CLI（可選：手動控制）',
-                    uri: liveCliUrl
-                  }
-                }
-              ]
-            }
-          }
-        }
-      ])
-    })
-
-    return { handled: true, taskId, action: 'task_started' }
+    return { handled: true, action: 'task_replied' }
   }
 
   async function startDiscussionTask(targetId, replyToken, prompt, ctx) {
+    const startTime = Date.now()
     const targetRepo = boundRepos[ctx.currentRepoIndex] || boundRepos[0]
     const base = targetRepo.split('/').pop()
     const aliasMap = {
@@ -440,38 +456,28 @@ export function createLineBotHandler(options = {}) {
     const repoName = aliasMap[base] || base
     const liveCliUrl = `${baseUrl}/s/${sessionId}?token=${sessionToken}`
 
+    const res1 = await runTaskAsync(targetRepo, 'claude', `請針對 ${prompt} 提出架構方案`)
+    const res2 = await runTaskAsync(
+      targetRepo,
+      'gemini',
+      `請針對以下架構方案進行代碼審查與邊緣案例補充：\n${res1.output.slice(-800)}`
+    )
+
+    const durationSec = Math.round((Date.now() - startTime) / 1000)
+    const clean1 = stripAnsi(res1.output).trim()
+    const clean2 = stripAnsi(res2.output).trim()
+    const brief1 = clean1.length > 500 ? `${clean1.slice(0, 480)}...` : clean1 || '架構規劃完成'
+    const brief2 = clean2.length > 500 ? `${clean2.slice(0, 480)}...` : clean2 || '邊界審查通過'
+
     await sendLineReply(replyToken, [
       {
         type: 'text',
-        text: `🤝 已喚醒【@1 Claude】與【@2 Gemini】針對專案 [${repoName}] 展開協商討論：\n「${prompt}」\n\n🟡 雙方正在多輪交叉審視中，請點擊下方開啟 Web CLI 觀看實時對話，討論結束將主動推播共識結論：\n${liveCliUrl}`
+        text: `⚖️【@1 與 @2 討論共識出爐】(耗時 ${durationSec}s)\n專案：${repoName}\n議題：${prompt}\n\n🏛️ @1 Claude 方案：\n${brief1}\n\n🛡️ @2 Gemini 審查：\n${brief2}`,
+        quickReply: makeStandardQuickReplies(ctx, liveCliUrl)
       }
     ])
 
-    const startTime = Date.now()
-    executeTaskProcess(targetRepo, 'claude', `請針對 ${prompt} 提出架構方案`, (res1) => {
-      executeTaskProcess(
-        targetRepo,
-        'gemini',
-        `請針對以下架構方案進行代碼審查與邊緣案例補充：\n${res1.output.slice(-800)}`,
-        (res2) => {
-          const durationSec = Math.round((Date.now() - startTime) / 1000)
-          const clean1 = stripAnsi(res1.output).trim()
-          const clean2 = stripAnsi(res2.output).trim()
-          const brief1 =
-            clean1.length > 500 ? `${clean1.slice(0, 480)}...` : clean1 || '架構規劃完成'
-          const brief2 =
-            clean2.length > 500 ? `${clean2.slice(0, 480)}...` : clean2 || '邊界審查通過'
-          sendLinePush(targetId, [
-            {
-              type: 'text',
-              text: `⚖️【@1 與 @2 討論共識出爐】(耗時 ${durationSec}s)\n專案：${repoName}\n議題：${prompt}\n\n🏛️ @1 Claude 方案：\n${brief1}\n\n🛡️ @2 Gemini 審查：\n${brief2}\n\n🔗 完整終端日誌 / 手動控制（選用）：\n${liveCliUrl}`
-            }
-          ])
-        }
-      )
-    })
-
-    return { handled: true, action: 'discussion_started' }
+    return { handled: true, action: 'discussion_replied' }
   }
 
   function executeTaskProcess(targetRepo, engine, prompt, onDone) {
@@ -523,12 +529,19 @@ export function createLineBotHandler(options = {}) {
     }
   }
 
+  async function sendDeployNotification(to, deployInfo = {}) {
+    const { repo, commit, status, message, url } = deployInfo
+    const deployText = `🚀【CI/CD 部署通報】\n專案：${repo || 'twin3'}\n狀態：${status || 'Success'}\nCommit：${commit || 'HEAD'}\n${message ? `說明：${message}\n` : ''}${url ? `連結：${url}` : ''}`
+    return sendLinePush(to, [{ type: 'text', text: deployText.trim() }])
+  }
+
   return {
     verifySignature,
     handleWebhookEvent,
     getContext,
     getPushApiLogs: () => pushApiCallLogs,
     getReplyApiLogs: () => replyApiCallLogs,
+    sendDeployNotification,
     setBaseUrl: (url) => {
       baseUrl = url
     }

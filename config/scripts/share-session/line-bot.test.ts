@@ -93,7 +93,7 @@ describe('createLineBotHandler', () => {
     expect(pushLogs.length).toBe(0)
   })
 
-  it('uses reply API for task start and only calls push API upon task completion', async () => {
+  it('uses reply API directly for task completion with quick replies and never calls push API', async () => {
     const handler = createLineBotHandler({
       boundRepos,
       baseUrl: 'http://localhost:3788',
@@ -106,7 +106,7 @@ describe('createLineBotHandler', () => {
         onDone: (res: { output: string; diffSummary: string }) => void
       ) => {
         setTimeout(() => {
-          onDone({ output: 'done', diffSummary: '1 file changed' })
+          onDone({ output: '檢查完成，一切正常', diffSummary: '1 file changed' })
         }, 50)
       }
     })
@@ -120,20 +120,36 @@ describe('createLineBotHandler', () => {
 
     const res = await handler.handleWebhookEvent(event)
     expect(res.handled).toBe(true)
-    expect(res.action).toBe('task_started')
+    expect(res.action).toBe('task_replied')
 
     const replyLogs = handler.getReplyApiLogs()
     expect(replyLogs.length).toBe(1)
     expect(replyLogs[0].messages[0].type).toBe('flex')
-    expect(replyLogs[0].messages[0].contents.footer.contents[0].action.uri).toContain(
-      'test-session'
-    )
+    expect(replyLogs[0].messages[0].quickReply.items.length).toBeGreaterThan(0)
+    expect(replyLogs[0].messages[0].contents.header.contents[0].text).toContain('任務完成')
 
-    await new Promise((resolve) => setTimeout(resolve, 150))
+    const pushLogs = handler.getPushApiLogs()
+    expect(pushLogs.length).toBe(0)
+  })
+
+  it('reserves push API exclusively for CI/CD deploy notifications', async () => {
+    const handler = createLineBotHandler({
+      boundRepos,
+      sessionId: 'test-session',
+      sessionToken: 'test-token'
+    })
+
+    await handler.sendDeployNotification('group-1', {
+      repo: 'twin3.sdk',
+      commit: 'abc1234',
+      status: 'Success',
+      message: 'All tests passed'
+    })
 
     const pushLogs = handler.getPushApiLogs()
     expect(pushLogs.length).toBe(1)
     expect(pushLogs[0].to).toBe('group-1')
-    expect(pushLogs[0].messages[0].contents.header.contents[0].text).toContain('任務完成')
+    expect(pushLogs[0].messages[0].text).toContain('CI/CD 部署通報')
+    expect(pushLogs[0].messages[0].text).toContain('twin3.sdk')
   })
 })
