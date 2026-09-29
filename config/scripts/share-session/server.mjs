@@ -15,7 +15,14 @@ export function createShareGateway(options = {}) {
   const activeAuthTokens = new Set()
 
   function getRepoMeta(repoPath) {
-    const name = path.basename(repoPath)
+    const baseName = path.basename(repoPath)
+    const aliasMap = {
+      'agent-id': 'xagent.id',
+      XHuman_ID: 'xhuman.id',
+      'twin3-sdk': 'twin3.sdk',
+      twin3_bitbee: 'bitbee'
+    }
+    const name = aliasMap[baseName] || baseName
     try {
       const branch = execSync('git rev-parse --abbrev-ref HEAD', {
         cwd: repoPath,

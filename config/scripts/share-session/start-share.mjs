@@ -20,11 +20,18 @@ function parseArgs() {
       options.repos = args[++i].split(',').map((r) => r.trim())
     } else if (arg === '--tunnel') {
       options.tunnel = true
+    } else if (arg === '--twin3') {
+      options.twin3 = true
     }
   }
 
-  if (options.repos.length === 0) {
-    options.repos = [process.cwd()]
+  if (options.twin3 || options.repos.length === 0) {
+    options.repos = [
+      '/Users/cis2042/APP/agent-id',
+      '/Users/cis2042/APP/XHuman_ID',
+      '/Users/cis2042/APP/twin3-sdk',
+      '/Users/cis2042/APP/twin3_bitbee'
+    ]
   }
 
   return options
