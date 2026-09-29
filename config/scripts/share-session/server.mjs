@@ -3,6 +3,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { spawn, execSync } from 'node:child_process'
+import { createLineBotHandler } from './line-bot.mjs'
 
 export function createShareGateway(options = {}) {
   const port = options.port || 3788
@@ -13,6 +14,14 @@ export function createShareGateway(options = {}) {
   const boundRepos = (options.repos || [process.cwd()]).map((r) => path.resolve(r))
 
   const activeAuthTokens = new Set()
+  const lineBot = createLineBotHandler({
+    channelAccessToken: options.lineChannelAccessToken,
+    channelSecret: options.lineChannelSecret,
+    boundRepos,
+    baseUrl: options.baseUrl || `http://localhost:${port}`,
+    sessionId,
+    sessionToken: token
+  })
 
   function getRepoMeta(repoPath) {
     const baseName = path.basename(repoPath)
@@ -106,6 +115,72 @@ export function createShareGateway(options = {}) {
           res.end(JSON.stringify({ ok: true, authToken }))
         } catch (e) {
           res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ ok: false, error: e.message }))
+        }
+      })
+      return
+    }
+
+    if (pathname === '/api/line/webhook' && req.method === 'POST') {
+      let body = ''
+      req.on('data', (chunk) => {
+        body += chunk
+      })
+      req.on('end', async () => {
+        try {
+          const signature = req.headers['x-line-signature'] || ''
+          if (!lineBot.verifySignature(body, signature)) {
+            res.writeHead(401, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ ok: false, error: 'Invalid signature' }))
+            return
+          }
+          const payload = JSON.parse(body || '{}')
+          const events = payload.events || []
+          for (const ev of events) {
+            await lineBot.handleWebhookEvent(ev)
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ ok: true }))
+        } catch (e) {
+          res.writeHead(500, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ ok: false, error: e.message }))
+        }
+      })
+      return
+    }
+
+    if (pathname === '/api/line/simulate' && req.method === 'POST') {
+      let body = ''
+      req.on('data', (chunk) => {
+        body += chunk
+      })
+      req.on('end', async () => {
+        try {
+          const payload = JSON.parse(body || '{}')
+          const ev = {
+            type: 'message',
+            replyToken: `sim-reply-${crypto.randomUUID().slice(0, 8)}`,
+            source: {
+              groupId: payload.groupId || 'group-test-1',
+              userId: payload.userId || 'user-test-1'
+            },
+            message: {
+              type: 'text',
+              text: payload.text || ''
+            }
+          }
+          const result = await lineBot.handleWebhookEvent(ev)
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end(
+            JSON.stringify({
+              ok: true,
+              result,
+              replyLogs: lineBot.getReplyApiLogs(),
+              pushLogs: lineBot.getPushApiLogs()
+            })
+          )
+        } catch (e) {
+          res.writeHead(500, { 'Content-Type': 'application/json' })
           res.end(JSON.stringify({ ok: false, error: e.message }))
         }
       })
@@ -260,6 +335,7 @@ export function createShareGateway(options = {}) {
     token,
     password,
     boundRepos,
+    lineBot,
     listen: () => new Promise((resolve) => server.listen(port, () => resolve(port))),
     close: () => new Promise((resolve) => server.close(resolve))
   }

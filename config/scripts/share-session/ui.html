@@ -2,400 +2,372 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Twin3 Shared Session Console</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Twin3 Shared Session Console (Mobile Live CLI)</title>
   <style>
     :root {
-      --bg: #0d1117;
-      --card-bg: #161b22;
-      --border: #30363d;
+      --bg: #090d16;
+      --card-bg: #121826;
+      --border: #232d3f;
       --text: #c9d1d9;
-      --text-dim: #8b949e;
+      --text-dim: #7d8590;
       --accent: #58a6ff;
-      --accent-glow: rgba(88, 166, 255, 0.2);
+      --accent-soft: rgba(88, 166, 255, 0.12);
       --success: #3fb950;
+      --success-soft: rgba(63, 185, 80, 0.12);
+      --warning: #d29922;
       --danger: #f85149;
       --terminal-bg: #030712;
-      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
       --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body {
       background: var(--bg);
       color: var(--text);
       font-family: var(--font-sans);
-      min-height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
     }
+
     header {
       background: var(--card-bg);
       border-bottom: 1px solid var(--border);
-      padding: 12px 24px;
+      padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 10px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-shrink: 0;
     }
-    .brand {
+    .brand-wrap {
       display: flex;
       align-items: center;
-      gap: 12px;
-      font-size: 16px;
-      font-weight: 600;
-      color: #fff;
+      gap: 8px;
     }
-    .badge {
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 12px;
-      background: rgba(88, 166, 255, 0.15);
-      color: var(--accent);
-      border: 1px solid var(--accent);
-      font-weight: 500;
-    }
-    .session-meta {
-      font-size: 13px;
-      color: var(--text-dim);
-      display: flex;
-      gap: 16px;
-      align-items: center;
-    }
-    .main-container {
-      display: grid;
-      grid-template-columns: 320px 1fr;
-      flex: 1;
-      height: calc(100vh - 65px);
-      overflow: hidden;
-    }
-    .sidebar {
-      background: var(--card-bg);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto;
-    }
-    .sidebar-section {
-      padding: 16px;
-      border-bottom: 1px solid var(--border);
-    }
-    .section-title {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-dim);
-      margin-bottom: 10px;
-      font-weight: 600;
-    }
-    .repo-item {
-      padding: 10px 12px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: #0d1117;
-      margin-bottom: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .repo-item:hover, .repo-item.active {
-      border-color: var(--accent);
-      background: rgba(88, 166, 255, 0.05);
-    }
-    .repo-name {
-      font-weight: 600;
-      font-size: 13px;
+    .brand-title {
+      font-size: 15px;
+      font-weight: 700;
       color: #fff;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-    }
-    .repo-branch {
-      font-size: 11px;
-      color: var(--text-dim);
-      margin-top: 4px;
-      font-family: var(--font-mono);
-    }
-    .file-tree {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      color: var(--text);
-      max-height: 350px;
-      overflow-y: auto;
-    }
-    .file-item {
-      padding: 4px 6px;
-      border-radius: 4px;
-      cursor: pointer;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .file-item:hover {
-      background: rgba(255, 255, 255, 0.05);
-      color: #fff;
-    }
-    .work-area {
-      display: flex;
-      flex-direction: column;
-      background: var(--bg);
-      overflow: hidden;
-    }
-    .control-panel {
-      padding: 16px 24px;
-      background: var(--card-bg);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      gap: 16px;
-      align-items: center;
-    }
-    .form-group {
-      display: flex;
-      flex-direction: column;
       gap: 6px;
     }
-    .form-label {
-      font-size: 12px;
-      color: var(--text-dim);
-      font-weight: 500;
+    .badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      white-space: nowrap;
     }
-    select, input[type="text"], input[type="password"] {
-      background: #0d1117;
-      border: 1px solid var(--border);
-      border-radius: 6px;
+    .badge-accent {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border: 1px solid rgba(88, 166, 255, 0.3);
+    }
+    .badge-success {
+      background: var(--success-soft);
+      color: var(--success);
+      border: 1px solid rgba(63, 185, 80, 0.3);
+    }
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      display: inline-block;
+      box-shadow: 0 0 6px var(--success);
+    }
+    .pulse-dot.busy {
+      background: var(--warning);
+      box-shadow: 0 0 6px var(--warning);
+      animation: pulse 1s infinite alternate;
+    }
+    @keyframes pulse { from { opacity: 0.4; } to { opacity: 1; } }
+
+    .pills-scroll-row {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
       padding: 8px 12px;
-      color: #fff;
-      font-size: 13px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    select:focus, input:focus {
-      border-color: var(--accent);
-    }
-    .terminal-container {
-      flex: 1;
-      padding: 20px 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      overflow-y: auto;
-    }
-    .terminal-window {
-      background: var(--terminal-bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      min-height: 350px;
-      box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
-    }
-    .terminal-header {
-      background: #111827;
-      padding: 8px 16px;
+      background: #0f1420;
       border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .pills-scroll-row::-webkit-scrollbar { display: none; }
+    .pill {
+      flex: 0 0 auto;
+      padding: 5px 10px;
+      border-radius: 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      user-select: none;
+    }
+    .pill.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .meta-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 12px;
-      font-family: var(--font-mono);
+      padding: 6px 14px;
+      background: #0b0f19;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
       color: var(--text-dim);
+      flex-shrink: 0;
     }
-    .terminal-output {
-      padding: 16px;
-      font-family: var(--font-mono);
-      font-size: 13px;
-      line-height: 1.5;
-      color: #e5e7eb;
-      overflow-y: auto;
+    .meta-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .terminal-wrapper {
       flex: 1;
-      white-space: pre-wrap;
-      word-break: break-all;
+      position: relative;
+      background: var(--terminal-bg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
-    .input-box-container {
-      padding: 16px 24px;
+    .terminal-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 14px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.45;
+      color: #e5e7eb;
+      white-space: pre-wrap;
+      word-break: break-word;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .fab-scroll-bottom {
+      position: absolute;
+      right: 14px;
+      bottom: 16px;
+      background: rgba(30, 41, 59, 0.92);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      cursor: pointer;
+      display: none;
+      backdrop-filter: blur(8px);
+    }
+
+    .quick-actions-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 12px;
       background: var(--card-bg);
       border-top: 1px solid var(--border);
-      display: flex;
-      gap: 12px;
+      flex-shrink: 0;
     }
-    textarea {
-      flex: 1;
-      background: #0d1117;
+    .tool-btn {
+      background: transparent;
       border: 1px solid var(--border);
       border-radius: 6px;
-      padding: 12px;
+      padding: 4px 8px;
+      font-size: 11px;
+      color: var(--text-dim);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .tool-btn:active { background: rgba(255,255,255,0.08); color: #fff; }
+
+    .input-sheet {
+      background: var(--card-bg);
+      border-top: 1px solid var(--border);
+      padding: 8px 12px calc(env(safe-area-inset-bottom, 0px) + 8px);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .input-controls-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    select.mobile-select {
+      flex: 1;
+      background: #090d16;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
       color: #fff;
-      font-size: 14px;
-      font-family: var(--font-sans);
-      resize: none;
-      height: 70px;
+      font-size: 12px;
       outline: none;
     }
-    textarea:focus {
-      border-color: var(--accent);
+    .input-submit-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
     }
-    .btn {
-      padding: 0 20px;
-      border-radius: 6px;
-      border: none;
-      background: var(--accent);
+    textarea.mobile-textarea {
+      flex: 1;
+      background: #090d16;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
       color: #fff;
-      font-weight: 600;
-      font-size: 14px;
-      cursor: pointer;
+      font-size: 13px;
+      font-family: var(--font-sans);
+      resize: none;
+      height: 48px;
+      outline: none;
+    }
+    textarea.mobile-textarea:focus { border-color: var(--accent); }
+    .send-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      font-size: 18px;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      transition: opacity 0.2s;
+      cursor: pointer;
+      flex-shrink: 0;
     }
-    .btn:hover:not(:disabled) {
-      opacity: 0.9;
-    }
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
     .modal-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.85);
+      background: rgba(0, 0, 0, 0.9);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 100;
+      padding: 20px;
     }
     .modal-card {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      width: 380px;
-      padding: 24px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 340px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+      gap: 14px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.8);
     }
-    .modal-title {
-      font-size: 18px;
-      font-weight: 600;
+    .modal-card input {
+      background: #090d16;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
       color: #fff;
+      font-size: 14px;
+      outline: none;
     }
-    .modal-desc {
-      font-size: 13px;
-      color: var(--text-dim);
-      line-height: 1.4;
+    .modal-card button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
     }
     .hidden { display: none !important; }
-    .pulse-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--success);
-      display: inline-block;
-      box-shadow: 0 0 8px var(--success);
-    }
-    .pulse-dot.busy {
-      background: #e3b341;
-      box-shadow: 0 0 8px #e3b341;
-      animation: pulse 1s infinite alternate;
-    }
-    @keyframes pulse {
-      from { opacity: 0.4; }
-      to { opacity: 1; }
-    }
-    .diff-badge {
-      font-size: 12px;
-      padding: 4px 8px;
-      background: rgba(63, 185, 80, 0.1);
-      color: var(--success);
-      border-radius: 4px;
-      margin-top: 6px;
-      display: inline-block;
-      font-family: var(--font-mono);
-    }
   </style>
 </head>
 <body>
 
   <div id="authModal" class="modal-backdrop">
     <div class="modal-card">
-      <div class="modal-title">🔐 受保護的 Twin3 協作 Session</div>
-      <div class="modal-desc">此 Session 已綁定專屬 Repo 與 AI 執行權限，請輸入訪問密碼以解鎖主控台。</div>
-      <div class="form-group">
-        <label class="form-label" for="passwordInput">存取密碼</label>
-        <input type="password" id="passwordInput" placeholder="請輸入密碼..." />
-      </div>
-      <button class="btn" id="unlockBtn" style="height: 38px;">驗證並解鎖</button>
+      <div style="font-size: 16px; font-weight: 700; color: #fff;">🔐 Twin3 解鎖驗證</div>
+      <div style="font-size: 12px; color: var(--text-dim); line-height: 1.4;">此工作階段受保護，請輸入存取密碼以啟用手機專用 Web CLI。</div>
+      <input type="password" id="passwordInput" placeholder="請輸入訪問密碼..." />
+      <button id="unlockBtn">確認解鎖</button>
       <div id="authError" style="font-size: 12px; color: var(--danger);" class="hidden"></div>
     </div>
   </div>
 
   <header>
-    <div class="brand">
-      <span>⚡ Twin3 Session Hub</span>
-      <span class="badge" id="sessionBadge">Session Loading...</span>
-      <span class="badge" style="background: rgba(63, 185, 80, 0.15); color: var(--success); border-color: var(--success);">Zero-Key Proxy</span>
+    <div class="brand-wrap">
+      <div class="brand-title">
+        <span>⚡ Twin3 Live CLI</span>
+      </div>
+      <span class="badge badge-accent" id="sessionBadge">Session</span>
     </div>
-    <div class="session-meta">
-      <div>狀態: <span class="pulse-dot" id="statusDot"></span> <span id="statusText">就緒</span></div>
-      <div>可用模型: <span id="modelsList" style="color: #fff; font-weight: 500;">Claude, Gemini, Codex, Agent</span></div>
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <span class="pulse-dot" id="statusDot"></span>
+      <span style="font-size: 11px; color: var(--text-dim);" id="statusText">連線中</span>
     </div>
   </header>
 
-  <div class="main-container">
-    <div class="sidebar">
-      <div class="sidebar-section">
-        <div class="section-title">已綁定之專屬 Repo</div>
-        <div id="repoList"></div>
-      </div>
-      <div class="sidebar-section" style="flex: 1;">
-        <div class="section-title">Repo 檔案瀏覽（僅限授權範圍）</div>
-        <div class="file-tree" id="fileTree">選擇上方 Repo 以載入檔案列表...</div>
-      </div>
+  <div class="pills-scroll-row" id="pillsRow">
+    <div class="pill active" data-idx="0">📦 載入中...</div>
+  </div>
+
+  <div class="meta-bar">
+    <div class="meta-left">
+      <span style="color: #fff; font-weight: 600;" id="activeRepoTitle">xagent.id</span>
+      <span style="font-family: var(--font-mono); font-size: 10px;" id="activeRepoBranch">🌿 main</span>
     </div>
+    <div id="execTimer" style="font-family: var(--font-mono); color: var(--accent);">00:00</div>
+  </div>
 
-    <div class="work-area">
-      <div class="control-panel">
-        <div class="form-group" style="min-width: 220px;">
-          <label class="form-label" for="modelSelect">執行模型 (使用宿主訂閱)</label>
-          <select id="modelSelect">
-            <option value="claude">Claude Code (Anthropic Subscription)</option>
-            <option value="gemini">Gemini CLI (Google AI)</option>
-            <option value="codex">Codex CLI (OpenAI Engine)</option>
-            <option value="agent">Cursor Agent (Cursor Ultra)</option>
-          </select>
-        </div>
-        <div class="form-group" style="min-width: 220px;">
-          <label class="form-label" for="targetRepoSelect">目標工作 Repo</label>
-          <select id="targetRepoSelect"></select>
-        </div>
-        <div style="flex: 1;"></div>
-        <div class="form-group">
-          <label class="form-label">安全沙盒防護</label>
-          <div style="font-size: 12px; color: var(--success);">🔒 宿主 API Key 嚴格隱藏 / 路徑嚴格限制</div>
-        </div>
-      </div>
+  <div class="terminal-wrapper">
+    <div class="terminal-scroll" id="terminalOutput">Twin3 Mobile Live Terminal 已就緒。
+點選上方專案標籤可快速切換 Repo，在下方輸入任務指示由本機 AI 代跑。</div>
+    <div class="fab-scroll-bottom" id="fabBottom">⬇️ 滾動至最新</div>
+  </div>
 
-      <div class="terminal-container">
-        <div class="terminal-window">
-          <div class="terminal-header">
-            <span>實時執行日誌與終端輸出 (SSE Stream)</span>
-            <span id="execTimer">00:00</span>
-          </div>
-          <div class="terminal-output" id="terminalOutput">準備就緒。請輸入欲執行的任務指示，點擊送出。</div>
-        </div>
-        <div id="diffSummaryContainer" class="hidden">
-          <div style="font-size: 13px; font-weight: 600; color: #fff;">變更統計 (Git Status):</div>
-          <div class="diff-badge" id="diffSummaryText"></div>
-        </div>
-      </div>
+  <div class="quick-actions-bar">
+    <div style="display: flex; gap: 6px;">
+      <button class="tool-btn" id="copyBtn">📋 複製紀錄</button>
+      <button class="tool-btn" id="clearBtn">🧹 清除畫面</button>
+    </div>
+    <div style="font-size: 10px; color: var(--success);" id="diffSummaryHint">✨ 零金鑰防護 (Zero-Key)</div>
+  </div>
 
-      <div class="input-box-container">
-        <textarea id="promptInput" placeholder="請在此輸入欲委託 AI 執行的具體工作任務（例如：檢查合約安全性、重構函式、撰寫單元測試）..."></textarea>
-        <button class="btn" id="runBtn">
-          <span>執行任務</span>
-          <span id="btnIcon">▶</span>
-        </button>
-      </div>
+  <div class="input-sheet">
+    <div class="input-controls-row">
+      <select class="mobile-select" id="modelSelect">
+        <option value="claude">@1 Claude Code (Anthropic)</option>
+        <option value="gemini">@2 Gemini CLI (Google AI)</option>
+        <option value="agent">@3 Cursor Agent (Ultra)</option>
+        <option value="codex">@4 Codex CLI (OpenAI)</option>
+      </select>
+    </div>
+    <div class="input-submit-row">
+      <textarea class="mobile-textarea" id="promptInput" placeholder="下達開發任務指令（或直接在 LINE 群組輸入）..."></textarea>
+      <button class="send-btn" id="runBtn">➤</button>
     </div>
   </div>
 
@@ -409,26 +381,55 @@
     let selectedRepoIndex = 0;
     let authHeader = '';
     let isExecuting = false;
+    let autoScroll = true;
 
     const authModal = document.getElementById('authModal');
     const passwordInput = document.getElementById('passwordInput');
     const unlockBtn = document.getElementById('unlockBtn');
     const authError = document.getElementById('authError');
     const sessionBadge = document.getElementById('sessionBadge');
-    const repoList = document.getElementById('repoList');
-    const targetRepoSelect = document.getElementById('targetRepoSelect');
-    const fileTree = document.getElementById('fileTree');
-    const modelSelect = document.getElementById('modelSelect');
-    const terminalOutput = document.getElementById('terminalOutput');
-    const promptInput = document.getElementById('promptInput');
-    const runBtn = document.getElementById('runBtn');
+    const pillsRow = document.getElementById('pillsRow');
+    const activeRepoTitle = document.getElementById('activeRepoTitle');
+    const activeRepoBranch = document.getElementById('activeRepoBranch');
     const statusDot = document.getElementById('statusDot');
     const statusText = document.getElementById('statusText');
     const execTimer = document.getElementById('execTimer');
-    const diffContainer = document.getElementById('diffSummaryContainer');
-    const diffText = document.getElementById('diffSummaryText');
+    const terminalOutput = document.getElementById('terminalOutput');
+    const fabBottom = document.getElementById('fabBottom');
+    const copyBtn = document.getElementById('copyBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const diffHint = document.getElementById('diffSummaryHint');
+    const modelSelect = document.getElementById('modelSelect');
+    const promptInput = document.getElementById('promptInput');
+    const runBtn = document.getElementById('runBtn');
 
-    sessionBadge.textContent = 'Session: ' + sessionId.slice(0, 8);
+    sessionBadge.textContent = sessionId.slice(0, 6);
+
+    terminalOutput.addEventListener('scroll', () => {
+      const atBottom = terminalOutput.scrollHeight - terminalOutput.scrollTop - terminalOutput.clientHeight < 30;
+      autoScroll = atBottom;
+      fabBottom.style.display = atBottom ? 'none' : 'block';
+    });
+
+    fabBottom.addEventListener('click', () => {
+      terminalOutput.scrollTop = terminalOutput.scrollHeight;
+      autoScroll = true;
+      fabBottom.style.display = 'none';
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(terminalOutput.textContent);
+        copyBtn.textContent = '✅ 已複製';
+        setTimeout(() => { copyBtn.textContent = '📋 複製紀錄'; }, 1500);
+      } catch (e) {
+        copyBtn.textContent = '❌ 失敗';
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      terminalOutput.textContent = '畫面已清空。等待下一筆輸出...\n';
+    });
 
     unlockBtn.addEventListener('click', async () => {
       const pwd = passwordInput.value.trim();
@@ -445,17 +446,13 @@
           authModal.classList.add('hidden');
           loadSessionData();
         } else {
-          authError.textContent = data.error || '密碼錯誤，請重新輸入';
+          authError.textContent = data.error || '密碼錯誤';
           authError.classList.remove('hidden');
         }
       } catch (e) {
         authError.textContent = '連線失敗: ' + e.message;
         authError.classList.remove('hidden');
       }
-    });
-
-    passwordInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') unlockBtn.click();
     });
 
     async function checkDirectAuth() {
@@ -481,93 +478,47 @@
         if (data.ok) {
           renderSession(data);
         }
-      } catch (e) {
-        console.error(e);
-      }
+      } catch (e) {}
     }
 
     function renderSession(data) {
       currentRepos = data.repos || [];
-      repoList.innerHTML = '';
-      targetRepoSelect.innerHTML = '';
-
+      pillsRow.innerHTML = '';
       currentRepos.forEach((repo, idx) => {
-        const item = document.createElement('div');
-        item.className = 'repo-item' + (idx === selectedRepoIndex ? ' active' : '');
-        item.innerHTML = `
-          <div class="repo-name">
-            <span>📦 ${repo.name}</span>
-            <span style="font-size: 11px; color: var(--accent);">${repo.status || 'OK'}</span>
-          </div>
-          <div class="repo-branch">🌿 ${repo.branch || 'main'} • ${repo.commit || ''}</div>
-        `;
-        item.onclick = () => {
+        const pill = document.createElement('div');
+        pill.className = 'pill' + (idx === selectedRepoIndex ? ' active' : '');
+        pill.textContent = `📦 ${repo.name}`;
+        pill.onclick = () => {
           selectedRepoIndex = idx;
-          document.querySelectorAll('.repo-item').forEach((el, i) => {
-            el.classList.toggle('active', i === idx);
-          });
-          targetRepoSelect.value = String(idx);
-          loadRepoFiles(idx);
+          document.querySelectorAll('.pill').forEach((el, i) => el.classList.toggle('active', i === idx));
+          updateActiveRepoMeta();
         };
-        repoList.appendChild(item);
-
-        const opt = document.createElement('option');
-        opt.value = String(idx);
-        opt.textContent = `${repo.name} (${repo.branch || 'main'})`;
-        targetRepoSelect.appendChild(opt);
+        pillsRow.appendChild(pill);
       });
-
-      targetRepoSelect.onchange = (e) => {
-        selectedRepoIndex = parseInt(e.target.value, 10);
-        document.querySelectorAll('.repo-item').forEach((el, i) => {
-          el.classList.toggle('active', i === selectedRepoIndex);
-        });
-        loadRepoFiles(selectedRepoIndex);
-      };
-
-      if (currentRepos.length > 0) {
-        loadRepoFiles(selectedRepoIndex);
-      }
+      updateActiveRepoMeta();
+      statusText.textContent = '就緒';
     }
 
-    async function loadRepoFiles(repoIdx) {
-      fileTree.innerHTML = '載入檔案中...';
-      try {
-        const res = await fetch(`/api/s/${sessionId}/files?repoIndex=${repoIdx}`, {
-          headers: { 'Authorization': 'Bearer ' + authHeader, 'X-Session-Token': token }
-        });
-        const data = await res.json();
-        if (data.ok && Array.isArray(data.files)) {
-          fileTree.innerHTML = '';
-          data.files.forEach(f => {
-            const div = document.createElement('div');
-            div.className = 'file-item';
-            div.textContent = (f.isDir ? '📁 ' : '📄 ') + f.path;
-            fileTree.appendChild(div);
-          });
-        } else {
-          fileTree.textContent = '無法讀取檔案列表';
-        }
-      } catch (e) {
-        fileTree.textContent = '讀取錯誤: ' + e.message;
-      }
+    function updateActiveRepoMeta() {
+      const repo = currentRepos[selectedRepoIndex];
+      if (!repo) return;
+      activeRepoTitle.textContent = repo.name;
+      activeRepoBranch.textContent = `🌿 ${repo.branch || 'main'}`;
     }
 
     let timerInterval = null;
     function startTimer() {
-      let seconds = 0;
+      let sec = 0;
       execTimer.textContent = '00:00';
       clearInterval(timerInterval);
       timerInterval = setInterval(() => {
-        seconds++;
-        const m = String(Math.floor(seconds / 60)).padStart(2, '0');
-        const s = String(seconds % 60).padStart(2, '0');
+        sec++;
+        const m = String(Math.floor(sec / 60)).padStart(2, '0');
+        const s = String(sec % 60).padStart(2, '0');
         execTimer.textContent = `${m}:${s}`;
       }, 1000);
     }
-    function stopTimer() {
-      clearInterval(timerInterval);
-    }
+    function stopTimer() { clearInterval(timerInterval); }
 
     runBtn.addEventListener('click', async () => {
       const prompt = promptInput.value.trim();
@@ -575,13 +526,14 @@
 
       const model = modelSelect.value;
       const repoIdx = selectedRepoIndex;
+      const targetRepo = currentRepos[repoIdx];
 
       isExecuting = true;
       runBtn.disabled = true;
       statusDot.className = 'pulse-dot busy';
-      statusText.textContent = '正在執行 AI 任務...';
-      terminalOutput.textContent = `[啟動任務] 模型: ${model} | 目標: ${currentRepos[repoIdx]?.name || ''}\n[指令下達] ${prompt}\n----------------------------------------\n`;
-      diffContainer.classList.add('hidden');
+      statusText.textContent = '執行中';
+      terminalOutput.textContent += `\n\n[啟動任務] 專案: ${targetRepo?.name || ''} | 模型: ${model}\n指示: ${prompt}\n${'-'.repeat(40)}\n`;
+      if (autoScroll) terminalOutput.scrollTop = terminalOutput.scrollHeight;
       startTimer();
 
       try {
@@ -609,14 +561,13 @@
                 const parsed = JSON.parse(line.slice(6));
                 if (parsed.text) {
                   terminalOutput.textContent += parsed.text;
-                  terminalOutput.scrollTop = terminalOutput.scrollHeight;
+                  if (autoScroll) terminalOutput.scrollTop = terminalOutput.scrollHeight;
                 }
                 if (parsed.done) {
                   if (parsed.diff) {
-                    diffText.textContent = parsed.diff;
-                    diffContainer.classList.remove('hidden');
+                    diffHint.textContent = `📊 變更: ${parsed.diff}`;
                   }
-                  statusText.textContent = '執行完成';
+                  statusText.textContent = '完成';
                 }
               } catch (e) {
                 terminalOutput.textContent += line.slice(6) + '\n';
@@ -625,14 +576,13 @@
           }
         }
       } catch (e) {
-        terminalOutput.textContent += `\n[執行錯誤] ${e.message}\n`;
-        statusText.textContent = '執行中斷';
+        terminalOutput.textContent += `\n[通訊中斷] ${e.message}\n`;
+        statusText.textContent = '中斷';
       } finally {
         isExecuting = false;
         runBtn.disabled = false;
         statusDot.className = 'pulse-dot';
         stopTimer();
-        loadRepoFiles(selectedRepoIndex);
       }
     });
 
