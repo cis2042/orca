@@ -9,6 +9,35 @@ describe('createLineBotHandler', () => {
     '/Users/cis2042/APP/twin3_bitbee'
   ]
 
+  it('replies with command guide for /help and does not call push API', async () => {
+    const handler = createLineBotHandler({
+      boundRepos,
+      baseUrl: 'http://localhost:3788',
+      sessionId: 'test-session',
+      sessionToken: 'test-token'
+    })
+
+    const event = {
+      type: 'message',
+      replyToken: 'test-reply-token-help',
+      source: { groupId: 'group-1' },
+      message: { type: 'text', text: '/help' }
+    }
+
+    const res = await handler.handleWebhookEvent(event)
+    expect(res.handled).toBe(true)
+    expect(res.action).toBe('show_help')
+
+    const replyLogs = handler.getReplyApiLogs()
+    expect(replyLogs.length).toBe(1)
+    expect(replyLogs[0].replyToken).toBe('test-reply-token-help')
+    expect(replyLogs[0].messages[0].text).toContain('Twin3 多 Agent 協作指令清單')
+    expect(replyLogs[0].messages[0].text).toContain('/project')
+
+    const pushLogs = handler.getPushApiLogs()
+    expect(pushLogs.length).toBe(0)
+  })
+
   it('replies with quick replies for /project and does not call push API', async () => {
     const handler = createLineBotHandler({
       boundRepos,

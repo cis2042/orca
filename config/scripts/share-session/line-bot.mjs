@@ -136,6 +136,16 @@ export function createLineBotHandler(options = {}) {
       twin3_bitbee: 'bitbee'
     }
 
+    if (text === '/help' || text === '說明' || text === 'help' || text === '/?') {
+      await sendLineReply(replyToken, [
+        {
+          type: 'text',
+          text: `⚡ Twin3 多 Agent 協作指令清單：\n\n【專案切換】\n• /project 或 /repos：彈出圖示選單切換 4 大專案（xagent.id, xhuman.id, twin3.sdk, bitbee）\n\n【模型切換】\n• /model：彈出選單挑選具體模型\n• /claude、/gemini、/codex、/agy：快速切換服務引擎\n\n【多 Agent 指揮派工】\n• @1 <任務>：指派給 Agent 1（Claude Code 架構師）\n• @2 <任務>：指派給 Agent 2（Gemini 測試工程師）\n• @3 <任務>：指派給 Agent 3（Cursor Agent 執行者）\n• @1 @2 討論 <議題>：啟動雙 Agent 展開 A2A 交叉審查與協商\n\n【即時監控】\n• 任務啟動後可點擊卡片開啟「手機 Web CLI」觀看實時跑碼，完成時將自動推送成果摘要與變更 Diff。`
+        }
+      ])
+      return { handled: true, action: 'show_help' }
+    }
+
     if (text === '/project' || text === '/repos') {
       await sendLineReply(replyToken, [
         {
