@@ -133,7 +133,7 @@ export class AgentSessionPtyWriteGate {
     return Boolean(
       binding?.sessionId === authority.sessionId &&
       binding.record?.sessionId === authority.sessionId &&
-      lease?.runtimeKind === 'tui' &&
+      (lease?.runtimeKind as string) === 'tui' &&
       (provingReservation || reprovingLiveOwner) &&
       !lease.unreconciled
     )

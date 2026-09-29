@@ -12,10 +12,19 @@ import {
   agentSessionRecordFixture
 } from './agent-session-record.test-fixture'
 import type { AgentSessionLease } from './agent-session-record'
+import type {
+  PersistedAgentSessionLease,
+  PersistedAgentSessionRecord
+} from './agent-session-legacy-handoff-lease'
 import { AGENT_SESSION_RPC_ERROR_CODES } from './agent-session-host-authority'
 
-function bindingFor(lease: AgentSessionLease) {
-  return { sessionId: lease.sessionId, record: agentSessionRecordFixture(lease) }
+function bindingFor(lease: PersistedAgentSessionLease) {
+  return {
+    sessionId: lease.sessionId,
+    record: agentSessionRecordFixture(
+      lease as unknown as AgentSessionLease
+    ) as unknown as PersistedAgentSessionRecord
+  }
 }
 
 describe('exemptions', () => {
@@ -35,7 +44,7 @@ describe('exemptions', () => {
 })
 
 describe('refusal matrix', () => {
-  const cases: { name: string; lease: Partial<AgentSessionLease>; code: string }[] = [
+  const cases: { name: string; lease: Partial<PersistedAgentSessionLease>; code: string }[] = [
     {
       name: 'native chat owns the session',
       lease: { runtimeKind: 'native' },
@@ -90,7 +99,9 @@ describe('refusal matrix', () => {
 
   for (const testCase of cases) {
     it(`refuses when ${testCase.name}`, () => {
-      const lease = agentSessionLeaseFixture(testCase.lease)
+      const lease = agentSessionLeaseFixture(
+        testCase.lease as unknown as Partial<AgentSessionLease>
+      ) as unknown as PersistedAgentSessionLease
       const admission = evaluateAgentSessionPtyWriteAdmission(bindingFor(lease))
       expect(admission.admitted).toBe(false)
       if (admission.admitted) {
@@ -150,7 +161,11 @@ describe('refusal matrix', () => {
     const emitted = new Set(
       cases.map((testCase) => {
         const admission = evaluateAgentSessionPtyWriteAdmission(
-          bindingFor(agentSessionLeaseFixture(testCase.lease))
+          bindingFor(
+            agentSessionLeaseFixture(
+              testCase.lease as unknown as Partial<AgentSessionLease>
+            ) as unknown as PersistedAgentSessionLease
+          )
         )
         return admission.admitted ? 'admitted' : admission.refusal.code
       })
@@ -199,7 +214,11 @@ describe('in-flight fence race', () => {
   it('refuses the rest of a write when the lease stopped admitting a writer', () => {
     const next = reevaluateAgentSessionPtyWriteAdmission({
       admitted,
-      binding: bindingFor(agentSessionLeaseFixture({ handoffStage: 'preparing' }))
+      binding: bindingFor(
+        agentSessionLeaseFixture({
+          handoffStage: 'preparing' as unknown as null
+        }) as unknown as PersistedAgentSessionLease
+      )
     })
     expect(next.admitted).toBe(false)
     if (next.admitted) {
@@ -271,7 +290,12 @@ describe('typed error', () => {
 
   it('describes who holds the session and what stage it is in', () => {
     const admission = evaluateAgentSessionPtyWriteAdmission(
-      bindingFor(agentSessionLeaseFixture({ runtimeKind: 'native', handoffStage: 'preparing' }))
+      bindingFor(
+        agentSessionLeaseFixture({
+          runtimeKind: 'native',
+          handoffStage: 'preparing' as unknown as null
+        }) as unknown as PersistedAgentSessionLease
+      )
     )
     if (admission.admitted) {
       throw new Error('expected a refusal')

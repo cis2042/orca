@@ -15,12 +15,11 @@ import {
   agentSessionLeaseAdmitsWriter,
   isAgentSessionFenceCurrent
 } from './agent-session-lease-adjudication'
+import type { AgentSessionLease, AgentSessionRecord } from './agent-session-record'
 import type {
-  AgentSessionHandoffStage,
-  AgentSessionLease,
-  AgentSessionOwnerRuntimeKind,
-  AgentSessionRecord
-} from './agent-session-record'
+  PersistedAgentSessionHandoffStage,
+  PersistedAgentSessionRuntimeKind
+} from './agent-session-legacy-handoff-lease'
 
 /**
  * Every code is already in `AGENT_SESSION_RPC_ERROR_CODES`, so a refusal reaching an old client
@@ -36,8 +35,8 @@ export type AgentSessionPtyWriteRefusal = {
   code: AgentSessionPtyWriteRefusalCode
   sessionId: string
   /** Runtime the lease names as owner; null once the record is gone. */
-  ownerRuntimeKind: AgentSessionOwnerRuntimeKind | null
-  handoffStage: AgentSessionHandoffStage | null
+  ownerRuntimeKind: PersistedAgentSessionRuntimeKind | null
+  handoffStage: PersistedAgentSessionHandoffStage | null
   /** Pid the lease names, so the refusal can say who holds the session. */
   ownerPid: number | null
   runtimeFence: number | null
@@ -67,10 +66,10 @@ function classifyRefusal(lease: AgentSessionLease): AgentSessionPtyWriteRefusalC
   if (lease.claimStatus === 'conflicted') {
     return 'agent_session_conflict'
   }
-  if (lease.handoffStage === 'recovering' || lease.handoffStage === 'manual-recovery') {
+  if (lease.handoffStage === 'recovering' || (lease.handoffStage as string) === 'manual-recovery') {
     return 'execution_owner_reconciling'
   }
-  if (lease.handoffStage !== null || lease.runtimeKind !== 'tui') {
+  if (lease.handoffStage !== null || (lease.runtimeKind as string) !== 'tui') {
     // Why: a live native owner and a mid-flight handoff are both "someone else holds it", which is
     // actionable in a way "we cannot tell" is not.
     return 'agent_session_conflict'
@@ -111,7 +110,7 @@ export function evaluateAgentSessionPtyWriteAdmission(
     return refuse('agent_session_ownership_unknown', binding.sessionId, record.lease)
   }
   const lease = record.lease
-  if (lease.runtimeKind === 'tui' && agentSessionLeaseAdmitsWriter(lease)) {
+  if ((lease.runtimeKind as string) === 'tui' && agentSessionLeaseAdmitsWriter(lease)) {
     return { admitted: true, sessionId: record.sessionId, runtimeFence: lease.runtimeFence }
   }
   return refuse(classifyRefusal(lease), binding.sessionId, lease)

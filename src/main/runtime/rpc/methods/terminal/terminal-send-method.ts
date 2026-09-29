@@ -243,8 +243,6 @@ export const TERMINAL_SEND_METHODS = [
       } catch (error) {
         mobileFloorClaim.current?.rollback()
         if (isAgentSessionPtyWriteRefusedError(error)) {
-          // Why: name the owner and the stage instead of a bare not-writable, so a client can say
-          // who holds the session rather than retrying into a lease it will never win.
           return {
             send: {
               handle: params.terminal,

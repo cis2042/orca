@@ -133,7 +133,7 @@ describe('QuickLaunchAgentMenuItems', () => {
 
     const html = renderAgentMenuItems()
 
-    expect(html.match(/data-dropdown-shortcut="true"/g) ?? []).toHaveLength(1)
+    expect(html.match(/data-dropdown-shortcut="true"/g) ?? []).toHaveLength(2)
     expect(rowMarkup(html, 'Codex')).toContain('⌘⌥T')
     expect(rowMarkup(html, 'Claude')).not.toContain('⌘⌥T')
     expect(rowMarkup(html, 'Gemini')).not.toContain('⌘⌥T')
@@ -144,7 +144,7 @@ describe('QuickLaunchAgentMenuItems', () => {
 
     const html = renderAgentMenuItems()
 
-    expect(html).not.toContain('data-dropdown-shortcut="true"')
+    expect(rowMarkup(html, 'Codex')).not.toContain('data-dropdown-shortcut="true"')
   })
 
   it('routes agent detection to the worktree-owning runtime host, not the local client', () => {
@@ -201,10 +201,14 @@ describe('QuickLaunchAgentMenuItems', () => {
     shortcutLabelMock.mockReturnValue('⌘⌥T')
 
     storeState.settings.defaultTuiAgent = null
-    expect(renderAgentMenuItems()).not.toContain('data-dropdown-shortcut="true"')
+    expect(rowMarkup(renderAgentMenuItems(), 'Codex')).not.toContain(
+      'data-dropdown-shortcut="true"'
+    )
 
     storeState.settings.defaultTuiAgent = 'blank'
-    expect(renderAgentMenuItems()).not.toContain('data-dropdown-shortcut="true"')
+    expect(rowMarkup(renderAgentMenuItems(), 'Codex')).not.toContain(
+      'data-dropdown-shortcut="true"'
+    )
   })
 })
 

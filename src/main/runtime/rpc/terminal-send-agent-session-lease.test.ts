@@ -15,7 +15,7 @@ const REFUSAL: AgentSessionPtyWriteRefusal = {
   code: 'agent_session_conflict',
   sessionId: 'session-alpha-1',
   ownerRuntimeKind: 'native',
-  handoffStage: 'preparing',
+  handoffStage: 'recovering',
   ownerPid: 4242,
   runtimeFence: 7
 }
