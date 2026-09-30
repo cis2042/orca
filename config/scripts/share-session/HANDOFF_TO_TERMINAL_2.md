@@ -40,7 +40,7 @@ Ming 指派之 Twin3 LINE 雙向管理系統已推進至**雲地雙軌架構**�
 
 ## 3. 當前運行環境與服務狀態 (Active Runtime State)
 - **本地守護進程**：
-  - 啟動指令：`node config/scripts/share-session/start-share.mjs --tunnel --password twin3secret`
+  - 啟動指令：`node config/scripts/share-session/start-share.mjs --tunnel`
   - 本地連接埠：`3788`
   - 最新 LINE Webhook 穿透網址：已自動同步至 LINE 官方後台，官方連線檢驗為 200 OK。
 - **未決事項 (Pending Actions for #2)**：

@@ -20,7 +20,7 @@ function parseArgs() {
   const args = process.argv.slice(2)
   const options = {
     port: 3788,
-    password: null,
+    password: process.env.SESSION_PASSWORD || null,
     repos: [],
     tunnel: false,
     lineChannelSecret: process.env.LINE_CHANNEL_SECRET || null,

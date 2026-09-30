@@ -41,7 +41,7 @@
     "check:readme-local-links": "node config/scripts/check-readme-local-links.mjs",
     "sync:upstream": "node config/scripts/sync-upstream-orca.mjs",
     "share:session": "node config/scripts/share-session/start-share.mjs",
-    "share:line": "node config/scripts/share-session/start-share.mjs --tunnel --password twin3secret",
+    "share:line": "node config/scripts/share-session/start-share.mjs --tunnel",
     "share:line:test": "vitest run config/scripts/share-session/",
     "share:line:lint": "oxlint config/scripts/share-session/",
     "build:orcad-template": "node config/scripts/build-orcad-template.mjs",
