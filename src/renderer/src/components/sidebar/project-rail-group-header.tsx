@@ -12,9 +12,35 @@ import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import type { ProjectGroup } from '../../../../shared/project-group-types'
 
+const MAX_LISTED_PROJECT_NAMES = 8
+
+export function ProjectNameList({ names }: { names: string[] }): React.JSX.Element | null {
+  if (names.length === 0) {
+    return null
+  }
+  const listed = names.slice(0, MAX_LISTED_PROJECT_NAMES)
+  const remaining = names.length - listed.length
+  return (
+    <ul className="flex flex-col gap-0.5 py-0.5 text-xs">
+      {listed.map((name, idx) => (
+        <li key={`${name}-${idx}`} className="max-w-56 truncate">
+          {name}
+        </li>
+      ))}
+      {remaining > 0 && (
+        <li className="text-[10px] text-muted-foreground">
+          {translate('auto.components.sidebar.ProjectIconRail.moreProjects', '還有 {{count}} 個', {
+            count: remaining
+          })}
+        </li>
+      )}
+    </ul>
+  )
+}
+
 export type ProjectRailGroupHeaderProps = {
   group: ProjectGroup
-  projectCount: number
+  projectNames: string[]
   isCollapsed: boolean
   isFirstGroup: boolean
   isLastGroup: boolean
@@ -31,7 +57,7 @@ export type ProjectRailGroupHeaderProps = {
 
 export const ProjectRailGroupHeader = React.memo(function ProjectRailGroupHeader({
   group,
-  projectCount,
+  projectNames,
   isCollapsed,
   isFirstGroup,
   isLastGroup,
@@ -45,6 +71,8 @@ export const ProjectRailGroupHeader = React.memo(function ProjectRailGroupHeader
   onDragLeave,
   onDrop
 }: ProjectRailGroupHeaderProps) {
+  const projectCount = projectNames.length
+  const groupTitle = group.name.trim()
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
@@ -75,18 +103,19 @@ export const ProjectRailGroupHeader = React.memo(function ProjectRailGroupHeader
               </div>
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={12} className="flex flex-col gap-0.5 text-xs">
-              <div className="flex items-center gap-1.5 font-semibold text-foreground">
+              <div className="flex items-center gap-1.5 font-semibold">
                 <span
                   className="size-2 rounded-full"
                   style={{ backgroundColor: group.color ?? '#6366f1' }}
                 />
-                <span>{group.name}</span>
+                {groupTitle && <span>{groupTitle}</span>}
                 {isCollapsed && (
                   <span className="text-[10px] font-normal text-muted-foreground">
                     ({translate('auto.components.sidebar.ProjectIconRail.collapsed', '已折疊')})
                   </span>
                 )}
               </div>
+              <ProjectNameList names={projectNames} />
               <div className="text-[10px] text-muted-foreground">
                 {translate(
                   'auto.components.sidebar.ProjectIconRail.groupProjectCount',
@@ -146,7 +175,7 @@ export const ProjectRailGroupHeader = React.memo(function ProjectRailGroupHeader
   )
 })
 
-export function UngroupedDivider({ count }: { count: number }): React.JSX.Element {
+export function UngroupedDivider({ projectNames }: { projectNames: string[] }): React.JSX.Element {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -158,13 +187,17 @@ export function UngroupedDivider({ count }: { count: number }): React.JSX.Elemen
           <div className="h-px flex-1 bg-worktree-sidebar-border/40" />
         </div>
       </TooltipTrigger>
-      <TooltipContent side="right" sideOffset={12} className="text-xs">
-        <span className="font-medium">
-          {translate('auto.components.sidebar.ProjectIconRail.ungroupedProjects', '未分組專案')}
-        </span>
-        <span className="text-muted-foreground ml-1.5 text-[10px]">
-          ({count} {translate('auto.components.sidebar.ProjectIconRail.projectsUnit', '個專案')})
-        </span>
+      <TooltipContent side="right" sideOffset={12} className="flex flex-col gap-0.5 text-xs">
+        <div>
+          <span className="font-medium">
+            {translate('auto.components.sidebar.ProjectIconRail.ungroupedProjects', '未分組專案')}
+          </span>
+          <span className="text-muted-foreground ml-1.5 text-[10px]">
+            ({projectNames.length}{' '}
+            {translate('auto.components.sidebar.ProjectIconRail.projectsUnit', '個專案')})
+          </span>
+        </div>
+        <ProjectNameList names={projectNames} />
       </TooltipContent>
     </Tooltip>
   )

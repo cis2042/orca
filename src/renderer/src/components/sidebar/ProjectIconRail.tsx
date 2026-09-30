@@ -222,7 +222,7 @@ export function ProjectIconRail(): React.JSX.Element {
                 <div key={group.id} className="flex flex-col items-center w-full gap-1.5">
                   <ProjectRailGroupHeader
                     group={group}
-                    projectCount={groupRepos.length}
+                    projectNames={groupRepos.map((repo) => repo.displayName)}
                     isCollapsed={isCollapsed}
                     isFirstGroup={groupIdx === 0}
                     isLastGroup={groupIdx === sortedProjectGroups.length - 1}
@@ -275,7 +275,9 @@ export function ProjectIconRail(): React.JSX.Element {
             {/* Ungrouped Projects */}
             {reposByGroupId.ungrouped.length > 0 && (
               <div className="flex flex-col items-center w-full gap-1.5">
-                <UngroupedDivider count={reposByGroupId.ungrouped.length} />
+                <UngroupedDivider
+                  projectNames={reposByGroupId.ungrouped.map((repo) => repo.displayName)}
+                />
                 {reposByGroupId.ungrouped.map((repo, repoIdx) => (
                   <ProjectRailItem
                     key={repo.id}

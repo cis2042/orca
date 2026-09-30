@@ -172,7 +172,7 @@ export const ProjectRailItem = React.memo(function ProjectRailItem({
               </button>
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={12} className="flex flex-col gap-0.5 text-xs">
-              <div className="font-semibold text-foreground">{repo.displayName}</div>
+              <div className="font-semibold">{repo.displayName}</div>
               <div className="flex items-center gap-1.5 text-muted-foreground">
                 {summary.status === 'running' ? (
                   <span className="size-1.5 rounded-full bg-workspace-status-review" />
