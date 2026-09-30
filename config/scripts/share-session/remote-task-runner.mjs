@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { spawn } from 'node:child_process'
 import { stripAnsi } from './line-transport.mjs'
@@ -7,6 +8,31 @@ import { createClaudeStreamParser } from './cli-stream-format.mjs'
 const ENGINE_BY_AGENT = { '@1': 'claude', '@2': 'gpt', '@3': 'gemini' }
 const KNOWN_ENGINES = new Set(['claude', 'gpt', 'gemini'])
 const MAX_PLAIN_OUTPUT = 30000
+
+export function materializeAttachment(
+  taskId,
+  attachmentName,
+  attachmentContent,
+  baseDir = os.tmpdir()
+) {
+  if (!attachmentName || !attachmentContent) {
+    return null
+  }
+  const safeName =
+    path.basename(attachmentName).replace(/[^\p{L}\p{N}._-]/gu, '_') || 'attachment.txt'
+  const dir = path.join(baseDir, 'twin3-line-attachments', path.basename(taskId))
+  fs.mkdirSync(dir, { recursive: true })
+  const filePath = path.join(dir, safeName)
+  fs.writeFileSync(filePath, attachmentContent, 'utf8')
+  return filePath
+}
+
+export function buildTaskPrompt(text, attachmentName, attachmentPath) {
+  if (!attachmentPath) {
+    return text
+  }
+  return `【附件】使用者在 LINE 上傳了「${attachmentName}」，完整內容已存於：${attachmentPath}\n請先完整閱讀這個檔案，「上方的檔案」「這份 .md」等說法都是指它。\n\n【指示】${text}`
+}
 
 function resolveBin(preferredPath, fallback) {
   return fs.existsSync(preferredPath) ? preferredPath : fallback
@@ -48,16 +74,34 @@ function createPlainScreen() {
   }
 }
 
-export function createRemoteTaskRunner({ boundRepos, getContext, spawnImpl = spawn }) {
+export function createRemoteTaskRunner({
+  boundRepos,
+  getContext,
+  spawnImpl = spawn,
+  attachmentDir
+}) {
   function resolveRepoPath(repoKey) {
     return boundRepos.find((repoPath) => path.basename(repoPath) === repoKey) || boundRepos[0]
   }
 
-  return function runRemoteTask(
-    { id, agentId, engine: requestedEngine, text, repoKey },
-    hooks = {}
-  ) {
+  return function runRemoteTask(task, hooks = {}) {
+    const {
+      id,
+      agentId,
+      engine: requestedEngine,
+      text,
+      repoKey,
+      attachmentName,
+      attachmentContent
+    } = task
     const targetRepo = resolveRepoPath(repoKey)
+    const attachmentPath = materializeAttachment(
+      id,
+      attachmentName,
+      attachmentContent,
+      attachmentDir
+    )
+    const prompt = buildTaskPrompt(text, attachmentName, attachmentPath)
     const engine = KNOWN_ENGINES.has(requestedEngine)
       ? requestedEngine
       : ENGINE_BY_AGENT[agentId] || 'claude'
@@ -78,7 +122,7 @@ export function createRemoteTaskRunner({ boundRepos, getContext, spawnImpl = spa
     ctx.agentTasks[agentId] = taskRecord
 
     const screen = engine === 'claude' ? createClaudeStreamParser() : createPlainScreen()
-    const header = `$ ${engine} @ ${path.basename(targetRepo)}\n> ${text}\n`
+    const header = `$ ${engine} @ ${path.basename(targetRepo)}\n> ${text}\n${attachmentPath ? `📎 ${attachmentName} → ${attachmentPath}\n` : ''}`
     let stderrText = ''
     const publish = () => {
       taskRecord.latestOutput = `${header}\n${screen.getScreen()}`
@@ -110,7 +154,7 @@ export function createRemoteTaskRunner({ boundRepos, getContext, spawnImpl = spa
 
       let child
       try {
-        const { cmd, args } = buildEngineCommand(engine, text)
+        const { cmd, args } = buildEngineCommand(engine, prompt)
         child = spawnImpl(cmd, args, {
           cwd: targetRepo,
           env: {

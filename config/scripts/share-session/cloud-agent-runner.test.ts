@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { createCloudAgentRunner } from './cloud-agent-runner.mjs'
 import { EventEmitter } from 'node:events'
 import { createLineBotHandler } from './line-bot.mjs'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { createRemoteTaskRunner } from './remote-task-runner.mjs'
 import { createClaudeStreamParser } from './cli-stream-format.mjs'
 
@@ -249,5 +252,34 @@ describe('remote task runner', () => {
     const lastOutputIndex = cloud.calls.lastIndexOf(outputs.at(-1)!)
     const completeIndex = cloud.calls.findIndex((c) => c.url.endsWith('/t11/complete'))
     expect(completeIndex).toBeGreaterThan(lastOutputIndex)
+  })
+
+  it('writes the LINE attachment to disk and points the agent prompt at it', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'attach-test-'))
+    const fake = createFakeSpawn([claudeTranscript])
+    const runRemoteTask = createRemoteTaskRunner({
+      boundRepos: ['/repos/XHuman_ID'],
+      getContext: createLineBotHandler({ boundRepos: ['/repos/XHuman_ID'] }).getContext,
+      spawnImpl: fake.spawnImpl,
+      attachmentDir: dir
+    })
+
+    const result = await runRemoteTask({
+      id: 'task_1',
+      agentId: '@1',
+      engine: 'claude',
+      text: '開 PR 執行上方的 .md 檔的工作',
+      repoKey: 'XHuman_ID',
+      attachmentName: '../HumanID 舊用戶取回.md',
+      attachmentContent: '# 工作令'
+    })
+
+    const savedPath = path.join(dir, 'twin3-line-attachments', 'task_1', 'HumanID_舊用戶取回.md')
+    expect(fs.readFileSync(savedPath, 'utf8')).toBe('# 工作令')
+    const prompt = fake.calls[0].args[1]
+    expect(prompt).toContain(savedPath)
+    expect(prompt).toContain('【指示】開 PR 執行上方的 .md 檔的工作')
+    expect(result.screen).toContain(`📎 ../HumanID 舊用戶取回.md → ${savedPath}`)
+    fs.rmSync(dir, { recursive: true, force: true })
   })
 })
