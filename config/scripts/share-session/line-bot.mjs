@@ -23,6 +23,7 @@ import {
 } from './line-transport.mjs'
 import { createGeminiBrain } from './gemini-brain.mjs'
 import { inspectRemoteStatus } from './remote-inspector.mjs'
+import { createRemoteTaskRunner } from './remote-task-runner.mjs'
 
 export function createLineBotHandler(options = {}) {
   const channelAccessToken =
@@ -611,6 +612,8 @@ export function createLineBotHandler(options = {}) {
     }
   }
 
+  const runRemoteTask = createRemoteTaskRunner({ boundRepos, getContext, executeTaskProcess })
+
   async function sendDeployNotification(to, info = {}) {
     const text = `🚀【CI/CD 部署通報】\n專案：${info.repo || 'twin3'}\n狀態：${info.status || 'Success'}\nCommit：${info.commit || 'HEAD'}${info.message ? `\n說明：${info.message}` : ''}${info.url ? `\n連結：${info.url}` : ''}`
     return sendLinePush(to, [{ type: 'text', text: text.trim() }])
@@ -626,6 +629,7 @@ export function createLineBotHandler(options = {}) {
     getPushApiLogs: () => pushApiCallLogs,
     getReplyApiLogs: () => replyApiCallLogs,
     sendDeployNotification,
+    runRemoteTask,
     generateGroupCliTicket: (gid) => ticketManager.generateTicket(gid),
     validateGroupTicket: (tk) => ticketManager.validateTicket(tk),
     hasGroupLock: () => allowedGroups.size > 0,

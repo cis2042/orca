@@ -1,4 +1,5 @@
 import { createShareGateway } from './server.mjs'
+import { createCloudAgentRunner } from './cloud-agent-runner.mjs'
 import { spawn } from 'node:child_process'
 import path from 'node:path'
 
@@ -69,6 +70,20 @@ async function main() {
 
   await gateway.listen()
 
+  const cloudBridgeUrl = process.env.BRIDGE_CLOUD_URL || ''
+  const cloudAgentToken = process.env.BRIDGE_AGENT_TOKEN || ''
+  const isCloudMode = Boolean(cloudBridgeUrl && cloudAgentToken)
+  const cloudRunner = isCloudMode
+    ? createCloudAgentRunner({
+        baseUrl: cloudBridgeUrl,
+        token: cloudAgentToken,
+        runTask: (task) => gateway.lineBot.runRemoteTask(task)
+      })
+    : null
+  if (cloudRunner) {
+    cloudRunner.start()
+  }
+
   const localUrl = `http://localhost:${gateway.port}/s/${gateway.sessionId}?token=${gateway.token}`
 
   console.log('====================================================')
@@ -87,6 +102,9 @@ async function main() {
         : '自動鎖定首個互動群組'
     }`
   )
+  console.log(
+    `☁️ 雲端中樞模式  : ${isCloudMode ? `已啟用，輪詢 ${cloudBridgeUrl}（LINE Webhook 由雲端承接，不自動覆寫）` : '未啟用'}`
+  )
   console.log('----------------------------------------------------')
 
   if (options.tunnel) {
@@ -97,7 +115,7 @@ async function main() {
     let failCount = 0
 
     const syncWebhookToLine = async (webhookUrl, retryCount = 0) => {
-      if (!options.lineChannelAccessToken) {
+      if (!options.lineChannelAccessToken || isCloudMode) {
         return false
       }
       try {
