@@ -139,3 +139,15 @@ export function createCloudAgentRunner(options = {}) {
     getUnsentCount: () => unsentCompletions.size
   }
 }
+
+export function createCloudRunnerFromEnv(env, lineBot, overrides = {}) {
+  if (!env.BRIDGE_CLOUD_URL || !env.BRIDGE_AGENT_TOKEN) {
+    return null
+  }
+  return createCloudAgentRunner({
+    baseUrl: env.BRIDGE_CLOUD_URL,
+    token: env.BRIDGE_AGENT_TOKEN,
+    runTask: (task, hooks) => lineBot.runRemoteTask(task, hooks),
+    ...overrides
+  })
+}

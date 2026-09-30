@@ -1,5 +1,5 @@
 import { createShareGateway } from './server.mjs'
-import { createCloudAgentRunner } from './cloud-agent-runner.mjs'
+import { createCloudRunnerFromEnv } from './cloud-agent-runner.mjs'
 import { spawn } from 'node:child_process'
 import path from 'node:path'
 
@@ -71,15 +71,8 @@ async function main() {
   await gateway.listen()
 
   const cloudBridgeUrl = process.env.BRIDGE_CLOUD_URL || ''
-  const cloudAgentToken = process.env.BRIDGE_AGENT_TOKEN || ''
-  const isCloudMode = Boolean(cloudBridgeUrl && cloudAgentToken)
-  const cloudRunner = isCloudMode
-    ? createCloudAgentRunner({
-        baseUrl: cloudBridgeUrl,
-        token: cloudAgentToken,
-        runTask: (task) => gateway.lineBot.runRemoteTask(task)
-      })
-    : null
+  const cloudRunner = createCloudRunnerFromEnv(process.env, gateway.lineBot)
+  const isCloudMode = Boolean(cloudRunner)
   if (cloudRunner) {
     cloudRunner.start()
   }

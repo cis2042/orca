@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createCloudAgentRunner } from './cloud-agent-runner.mjs'
+import { createCloudAgentRunner, createCloudRunnerFromEnv } from './cloud-agent-runner.mjs'
 import { EventEmitter } from 'node:events'
 import { createLineBotHandler } from './line-bot.mjs'
 import fs from 'node:fs'
@@ -281,5 +281,32 @@ describe('remote task runner', () => {
     expect(prompt).toContain('【指示】開 PR 執行上方的 .md 檔的工作')
     expect(result.screen).toContain(`📎 ../HumanID 舊用戶取回.md → ${savedPath}`)
     fs.rmSync(dir, { recursive: true, force: true })
+  })
+})
+
+describe('createCloudRunnerFromEnv', () => {
+  it('stays off without cloud settings', () => {
+    expect(createCloudRunnerFromEnv({}, { runRemoteTask: async () => ({}) })).toBeNull()
+  })
+
+  it('passes live progress hooks through to the line bot so the CLI screen streams while running', async () => {
+    const cloud = createFakeCloud([{ id: 't12', agentId: '@1', text: 'go', repoKey: 'agent-id' }])
+    const lineBot = {
+      runRemoteTask: async (_task: unknown, hooks?: { onProgress?: (s: string) => void }) => {
+        hooks?.onProgress?.('live screen')
+        await new Promise((r) => setTimeout(r, 20))
+        return { output: 'done' }
+      }
+    }
+    const runner = createCloudRunnerFromEnv(
+      { BRIDGE_CLOUD_URL: 'https://bridge.example', BRIDGE_AGENT_TOKEN: 'secret' },
+      lineBot,
+      { fetchImpl: cloud.fetchImpl, logger: silentLogger, progressIntervalMs: 5 }
+    )
+
+    await runner!.pollOnce()
+    await runner!.waitForIdle()
+    const outputs = cloud.calls.filter((c) => c.url.endsWith('/t12/output'))
+    expect(outputs.map((c) => JSON.parse(c.body).output)).toContain('live screen')
   })
 })
