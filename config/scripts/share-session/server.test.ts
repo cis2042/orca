@@ -52,7 +52,7 @@ describe('createShareGateway', () => {
     expect(statusData.ok).toBe(true)
     expect(statusData.sessionId).toBe(gateway.sessionId)
     expect(statusData.repos.length).toBeGreaterThan(0)
-    expect(statusData.models).toEqual(['claude', 'gemini', 'codex', 'agent'])
+    expect(statusData.models).toEqual(['claude', 'gpt', 'gemini'])
   })
 
   it('refuses wrong password', async () => {

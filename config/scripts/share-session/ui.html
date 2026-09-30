@@ -6,308 +6,66 @@
   <title>Twin3 Shared Session Console (Mobile Live CLI)</title>
   <style>
     :root {
-      --bg: #090d16;
-      --card-bg: #121826;
-      --border: #232d3f;
-      --text: #c9d1d9;
-      --text-dim: #7d8590;
-      --accent: #58a6ff;
-      --accent-soft: rgba(88, 166, 255, 0.12);
-      --success: #3fb950;
-      --success-soft: rgba(63, 185, 80, 0.12);
-      --warning: #d29922;
-      --danger: #f85149;
-      --terminal-bg: #030712;
+      --bg: #090d16; --card-bg: #121826; --border: #232d3f; --text: #c9d1d9; --text-dim: #7d8590;
+      --accent: #58a6ff; --accent-soft: rgba(88, 166, 255, 0.12);
+      --success: #3fb950; --success-soft: rgba(63, 185, 80, 0.12);
+      --warning: #d29922; --danger: #f85149; --terminal-bg: #030712;
       --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
       --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     html, body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font-sans);
-      height: 100dvh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
+      background: var(--bg); color: var(--text); font-family: var(--font-sans);
+      height: 100dvh; overflow: hidden; display: flex; flex-direction: column;
     }
-
     header {
-      background: var(--card-bg);
-      border-bottom: 1px solid var(--border);
+      background: var(--card-bg); border-bottom: 1px solid var(--border);
       padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
     }
-    .brand-wrap {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .brand-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .badge {
-      font-size: 10px;
-      padding: 2px 6px;
-      border-radius: 10px;
-      font-family: var(--font-mono);
-      font-weight: 600;
-      white-space: nowrap;
-    }
-    .badge-accent {
-      background: var(--accent-soft);
-      color: var(--accent);
-      border: 1px solid rgba(88, 166, 255, 0.3);
-    }
-    .badge-success {
-      background: var(--success-soft);
-      color: var(--success);
-      border: 1px solid rgba(63, 185, 80, 0.3);
-    }
-    .pulse-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--success);
-      display: inline-block;
-      box-shadow: 0 0 6px var(--success);
-    }
-    .pulse-dot.busy {
-      background: var(--warning);
-      box-shadow: 0 0 6px var(--warning);
-      animation: pulse 1s infinite alternate;
-    }
+    .brand-wrap { display: flex; align-items: center; gap: 8px; }
+    .brand-title { font-size: 15px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px; }
+    .badge { font-size: 10px; padding: 2px 6px; border-radius: 10px; font-family: var(--font-mono); font-weight: 600; white-space: nowrap; }
+    .badge-accent { background: var(--accent-soft); color: var(--accent); border: 1px solid rgba(88, 166, 255, 0.3); }
+    .badge-success { background: var(--success-soft); color: var(--success); border: 1px solid rgba(63, 185, 80, 0.3); }
+    .pulse-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); display: inline-block; box-shadow: 0 0 6px var(--success); }
+    .pulse-dot.busy { background: var(--warning); box-shadow: 0 0 6px var(--warning); animation: pulse 1s infinite alternate; }
     @keyframes pulse { from { opacity: 0.4; } to { opacity: 1; } }
-
-    .pills-scroll-row {
-      display: flex;
-      gap: 6px;
-      overflow-x: auto;
-      padding: 8px 12px;
-      background: #0f1420;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-      scrollbar-width: none;
-      -webkit-overflow-scrolling: touch;
-    }
-    .pills-scroll-row::-webkit-scrollbar { display: none; }
-    .pill {
-      flex: 0 0 auto;
-      padding: 5px 10px;
-      border-radius: 16px;
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      color: var(--text-dim);
-      font-size: 11px;
-      font-weight: 500;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      user-select: none;
-    }
-    .pill.active {
-      background: var(--accent-soft);
-      border-color: var(--accent);
-      color: #fff;
-      font-weight: 600;
-    }
-
-    .meta-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 6px 14px;
-      background: #0b0f19;
-      border-bottom: 1px solid var(--border);
-      font-size: 11px;
-      color: var(--text-dim);
-      flex-shrink: 0;
-    }
-    .meta-left {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .terminal-wrapper {
-      flex: 1;
-      position: relative;
-      background: var(--terminal-bg);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    .terminal-scroll {
-      flex: 1;
-      overflow-y: auto;
-      padding: 12px 14px;
-      font-family: var(--font-mono);
-      font-size: 12px;
-      line-height: 1.45;
-      color: #e5e7eb;
-      white-space: pre-wrap;
-      word-break: break-word;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .fab-scroll-bottom {
-      position: absolute;
-      right: 14px;
-      bottom: 16px;
-      background: rgba(30, 41, 59, 0.92);
-      border: 1px solid var(--accent);
-      color: var(--accent);
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-      cursor: pointer;
-      display: none;
-      backdrop-filter: blur(8px);
-    }
-
-    .quick-actions-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 6px 12px;
-      background: var(--card-bg);
-      border-top: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .tool-btn {
-      background: transparent;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 4px 8px;
-      font-size: 11px;
-      color: var(--text-dim);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
+    .switch-pop { animation: pop 0.26s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    @keyframes pop { 0% { transform: scale(0.85); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
+    .project-banner { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; background: #0d131f; border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 10px; }
+    .project-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .project-avatar-wrap { width: 32px; height: 32px; border-radius: 8px; background: var(--card-bg); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
+    .project-avatar-img { width: 100%; height: 100%; object-fit: cover; }
+    .project-titles { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .project-name-row { display: flex; align-items: center; gap: 6px; }
+    .project-name { font-size: 13px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .project-meta-row { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-dim); font-family: var(--font-mono); }
+    .model-chip-wrap { display: flex; align-items: center; gap: 6px; padding: 3px 8px; background: #141b29; border: 1px solid var(--border); border-radius: 16px; flex-shrink: 0; }
+    .agent-chip-wrap { display: flex; align-items: center; gap: 6px; padding: 3px 8px; background: #182234; border: 1px solid rgba(88, 166, 255, 0.4); border-radius: 16px; flex-shrink: 0; }
+    .model-logo-img { width: 18px; height: 18px; border-radius: 4px; object-fit: cover; }
+    .model-chip-text { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
+    .model-chip-name { font-size: 10px; font-weight: 700; color: #e5e7eb; white-space: nowrap; }
+    .model-chip-quota { font-size: 9px; font-weight: 600; color: var(--accent); white-space: nowrap; font-family: var(--font-mono); }
+    .terminal-wrapper { flex: 1; position: relative; background: var(--terminal-bg); display: flex; flex-direction: column; overflow: hidden; }
+    .terminal-scroll { flex: 1; overflow-y: auto; padding: 12px 14px; font-family: var(--font-mono); font-size: 12px; line-height: 1.45; color: #e5e7eb; white-space: pre-wrap; word-break: break-word; -webkit-overflow-scrolling: touch; }
+    .fab-scroll-bottom { position: absolute; right: 14px; bottom: 16px; background: rgba(30, 41, 59, 0.92); border: 1px solid var(--accent); color: var(--accent); padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.5); cursor: pointer; display: none; backdrop-filter: blur(8px); }
+    .quick-actions-bar { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; background: var(--card-bg); border-top: 1px solid var(--border); flex-shrink: 0; }
+    .tool-btn { background: transparent; border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; font-size: 11px; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; gap: 4px; }
     .tool-btn:active { background: rgba(255,255,255,0.08); color: #fff; }
-
-    .input-sheet {
-      background: var(--card-bg);
-      border-top: 1px solid var(--border);
-      padding: 8px 12px calc(env(safe-area-inset-bottom, 0px) + 8px);
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      flex-shrink: 0;
-    }
-    .input-controls-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    select.mobile-select {
-      flex: 1;
-      background: #090d16;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 6px 10px;
-      color: #fff;
-      font-size: 12px;
-      outline: none;
-    }
-    .input-submit-row {
-      display: flex;
-      gap: 8px;
-      align-items: flex-end;
-    }
-    textarea.mobile-textarea {
-      flex: 1;
-      background: #090d16;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px 10px;
-      color: #fff;
-      font-size: 13px;
-      font-family: var(--font-sans);
-      resize: none;
-      height: 48px;
-      outline: none;
-    }
-    textarea.mobile-textarea:focus { border-color: var(--accent); }
-    .send-btn {
-      width: 48px;
-      height: 48px;
-      border-radius: 8px;
-      background: var(--accent);
-      border: none;
-      color: #fff;
-      font-size: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.9);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      padding: 20px;
-    }
-    .modal-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      width: 100%;
-      max-width: 340px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.8);
-    }
-    .modal-card input {
-      background: #090d16;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 12px;
-      color: #fff;
-      font-size: 14px;
-      outline: none;
-    }
-    .modal-card button {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 10px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-    }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.9); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+    .modal-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; width: 100%; max-width: 340px; padding: 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 20px 40px rgba(0,0,0,0.8); }
+    .modal-card input { background: #090d16; border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; color: #fff; font-size: 14px; outline: none; }
+    .working-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; background: #111a2e; border-top: 1px solid rgba(88, 166, 255, 0.4); flex-shrink: 0; font-size: 11px; color: #e2e8f0; }
+    .working-left { display: flex; align-items: center; gap: 8px; }
+    .working-spinner { width: 13px; height: 13px; border: 2px solid rgba(88, 166, 255, 0.25); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .hidden { display: none !important; }
   </style>
 </head>
 <body>
 
-  <div id="authModal" class="modal-backdrop">
+  <div id="authModal" class="modal-backdrop hidden">
     <div class="modal-card">
       <div style="font-size: 16px; font-weight: 700; color: #fff;">🔐 Twin3 解鎖驗證</div>
       <div style="font-size: 12px; color: var(--text-dim); line-height: 1.4;">此工作階段受保護，請輸入存取密碼以啟用手機專用 Web CLI。</div>
@@ -317,80 +75,115 @@
     </div>
   </div>
 
+  <div id="groupBlockModal" class="modal-backdrop hidden">
+    <div class="modal-card" style="border-color: rgba(248, 81, 73, 0.4);">
+      <div style="font-size: 16px; font-weight: 700; color: #f85149;">🔒 群外存取已被阻擋</div>
+      <div style="font-size: 12px; color: var(--text-dim); line-height: 1.5;" id="groupBlockMsg">此 Web CLI 已鎖定僅限授權 LINE 群組使用。群外未獲授權之存取已被拒絕。<br><br>請在授權 LINE 群組中點選「🖥️ 即時觀看」或輸入 <code>/cli</code> 取得專屬安全授權。</div>
+    </div>
+  </div>
+
   <header>
     <div class="brand-wrap">
       <div class="brand-title">
-        <span>⚡ Twin3 Live CLI</span>
+        <span>⚡ Twin3 Live Stream</span>
       </div>
-      <span class="badge badge-accent" id="sessionBadge">Session</span>
+      <span class="badge badge-accent" id="sessionBadge">唯讀觀看</span>
     </div>
     <div style="display: flex; align-items: center; gap: 6px;">
       <span class="pulse-dot" id="statusDot"></span>
-      <span style="font-size: 11px; color: var(--text-dim);" id="statusText">連線中</span>
+      <span style="font-size: 11px; color: var(--text-dim);" id="statusText">就緒</span>
     </div>
   </header>
 
-  <div class="pills-scroll-row" id="pillsRow">
-    <div class="pill active" data-idx="0">📦 載入中...</div>
-  </div>
-
-  <div class="meta-bar">
-    <div class="meta-left">
-      <span style="color: #fff; font-weight: 600;" id="activeRepoTitle">xagent.id</span>
-      <span style="font-family: var(--font-mono); font-size: 10px;" id="activeRepoBranch">🌿 main</span>
+  <div class="project-banner">
+    <div class="project-info">
+      <div class="project-avatar-wrap">
+        <img id="activeRepoImg" class="project-avatar-img" src="/icons/xagent.png" alt="project icon" />
+      </div>
+      <div class="project-titles">
+        <div class="project-name-row">
+          <span class="project-name" id="activeRepoTitle">xagent.id</span>
+          <span class="badge badge-accent" id="activeRepoTag">Identity</span>
+        </div>
+        <div class="project-meta-row">
+          <span id="activeRepoBranch">🌿 main</span>
+          <span>•</span>
+          <span id="activeRepoStatus" style="color: var(--success);">Clean</span>
+        </div>
+      </div>
     </div>
-    <div id="execTimer" style="font-family: var(--font-mono); color: var(--accent);">00:00</div>
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <div class="agent-chip-wrap" id="agentChip">
+        <img id="activeAgentLogo" class="model-logo-img" src="/icons/agent-1.png" alt="agent logo" />
+        <span class="model-chip-name" id="activeAgentName" style="color: var(--accent);">Agent 1</span>
+      </div>
+      <div class="model-chip-wrap" id="modelChip">
+        <img id="activeModelLogo" class="model-logo-img" src="/icons/claude.png" alt="model logo" />
+        <div class="model-chip-text">
+          <span class="model-chip-name" id="activeModelName">Claude Opus 5.5</span>
+          <span class="model-chip-quota" id="activeModelQuota">🟢 額度正常</span>
+        </div>
+      </div>
+      <div id="execTimer" style="font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--accent); font-size: 12px; font-weight: 700;">00:00</div>
+    </div>
   </div>
 
   <div class="terminal-wrapper">
-    <div class="terminal-scroll" id="terminalOutput">Twin3 Mobile Live Terminal 已就緒。
-點選上方專案標籤可快速切換 Repo，在下方輸入任務指示由本機 AI 代跑。</div>
+    <div class="terminal-scroll" id="terminalOutput">Twin3 即時終端廣播通道已就緒。
+所有任務指令均在 LINE 群組發送，本畫面即時串流 AI 執行進度與終端輸出。</div>
+    <div id="workingBar" class="working-bar hidden">
+      <div class="working-left">
+        <div class="working-spinner"></div>
+        <span id="workingDesc" style="color: var(--accent); font-weight: 600;">Agent 深度檢索代碼庫與分析中...</span>
+      </div>
+      <div id="workingSecHint" style="font-family: var(--font-mono); color: var(--text-dim); font-size: 10px;">即時作動中</div>
+    </div>
     <div class="fab-scroll-bottom" id="fabBottom">⬇️ 滾動至最新</div>
   </div>
 
   <div class="quick-actions-bar">
     <div style="display: flex; gap: 6px;">
+      <button class="tool-btn" id="syncBtn">🔄 刷新同步</button>
       <button class="tool-btn" id="copyBtn">📋 複製紀錄</button>
       <button class="tool-btn" id="clearBtn">🧹 清除畫面</button>
     </div>
     <div style="font-size: 10px; color: var(--success);" id="diffSummaryHint">✨ 零金鑰防護 (Zero-Key)</div>
   </div>
 
-  <div class="input-sheet">
-    <div class="input-controls-row">
-      <select class="mobile-select" id="modelSelect">
-        <option value="claude">@1 Claude Code (Anthropic)</option>
-        <option value="gemini">@2 Gemini CLI (Google AI)</option>
-        <option value="agent">@3 Cursor Agent (Ultra)</option>
-        <option value="codex">@4 Codex CLI (OpenAI)</option>
-      </select>
+  <div class="observer-footer" style="padding: 10px 14px calc(env(safe-area-inset-bottom, 0px) + 8px); background: var(--card-bg); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span class="pulse-dot"></span>
+      <span style="font-size: 12px; color: var(--text-dim); font-weight: 500;">唯讀觀看模式 • 指令請於 LINE 群發送</span>
     </div>
-    <div class="input-submit-row">
-      <textarea class="mobile-textarea" id="promptInput" placeholder="下達開發任務指令（或直接在 LINE 群組輸入）..."></textarea>
-      <button class="send-btn" id="runBtn">➤</button>
-    </div>
+    <span style="font-size: 10px; color: var(--accent); font-weight: 600; padding: 2px 8px; background: rgba(88,166,255,0.12); border-radius: 12px; border: 1px solid rgba(88,166,255,0.3);">即時廣播</span>
   </div>
 
   <script>
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token') || '';
+    const ticket = urlParams.get('ticket') || '';
     const pathParts = window.location.pathname.split('/');
     const sessionId = pathParts[pathParts.indexOf('s') + 1] || '';
 
-    let currentRepos = [];
-    let selectedRepoIndex = 0;
     let authHeader = '';
-    let isExecuting = false;
     let autoScroll = true;
 
     const authModal = document.getElementById('authModal');
+    const groupBlockModal = document.getElementById('groupBlockModal');
     const passwordInput = document.getElementById('passwordInput');
     const unlockBtn = document.getElementById('unlockBtn');
     const authError = document.getElementById('authError');
     const sessionBadge = document.getElementById('sessionBadge');
-    const pillsRow = document.getElementById('pillsRow');
+    const activeRepoImg = document.getElementById('activeRepoImg');
     const activeRepoTitle = document.getElementById('activeRepoTitle');
+    const activeRepoTag = document.getElementById('activeRepoTag');
     const activeRepoBranch = document.getElementById('activeRepoBranch');
+    const activeAgentLogo = document.getElementById('activeAgentLogo');
+    const activeAgentName = document.getElementById('activeAgentName');
+    const activeRepoStatus = document.getElementById('activeRepoStatus');
+    const activeModelLogo = document.getElementById('activeModelLogo');
+    const activeModelName = document.getElementById('activeModelName');
+    const activeModelQuota = document.getElementById('activeModelQuota');
     const statusDot = document.getElementById('statusDot');
     const statusText = document.getElementById('statusText');
     const execTimer = document.getElementById('execTimer');
@@ -399,9 +192,26 @@
     const copyBtn = document.getElementById('copyBtn');
     const clearBtn = document.getElementById('clearBtn');
     const diffHint = document.getElementById('diffSummaryHint');
-    const modelSelect = document.getElementById('modelSelect');
-    const promptInput = document.getElementById('promptInput');
-    const runBtn = document.getElementById('runBtn');
+
+    const REPO_META = {
+      'xagent.id': { iconFile: 'xagent.png', tag: 'Identity', color: '#58a6ff' },
+      'xhuman.id': { iconFile: 'xhuman.png', tag: 'Biometrics', color: '#a371f7' },
+      'twin3.sdk': { iconFile: 'twin3.png', tag: 'Core SDK', color: '#3fb950' },
+      'twin3-sdk': { iconFile: 'twin3.png', tag: 'Core SDK', color: '#3fb950' },
+      'bitbee':    { iconFile: 'bitbee.png', tag: 'Web3 App', color: '#e3b341' }
+    };
+
+    const MODEL_META = {
+      claude: { name: 'Claude Opus 5.5', logo: '/icons/claude.png', quota: '🟢 額度正常' },
+      gpt:    { name: 'GPT 6 Sol', logo: '/icons/gpt.png', quota: '🟢 額度正常' },
+      gemini: { name: 'Gemini 3.8 Flash', logo: '/icons/gemini.png', quota: '🟢 額度正常' }
+    };
+
+    const AGENT_META = {
+      '@1': { name: 'Agent 1', logo: '/icons/agent-1.png' },
+      '@2': { name: 'Agent 2', logo: '/icons/agent-2.png' },
+      '@3': { name: 'Agent 3', logo: '/icons/agent-3.png' }
+    };
 
     sessionBadge.textContent = sessionId.slice(0, 6);
 
@@ -438,13 +248,17 @@
         const res = await fetch(`/api/s/${sessionId}/auth`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token, password: pwd })
+          body: JSON.stringify({ token, password: pwd, ticket })
         });
         const data = await res.json();
         if (data.ok) {
           authHeader = data.authToken;
           authModal.classList.add('hidden');
           loadSessionData();
+          initLiveStream();
+        } else if (data.blocked) {
+          authModal.classList.add('hidden');
+          groupBlockModal.classList.remove('hidden');
         } else {
           authError.textContent = data.error || '密碼錯誤';
           authError.classList.remove('hidden');
@@ -455,55 +269,194 @@
       }
     });
 
+    function triggerPop(el) {
+      if (!el) return;
+      el.classList.remove('switch-pop');
+      void el.offsetWidth;
+      el.classList.add('switch-pop');
+    }
+
+    function updateAgent(agentId) {
+      const meta = AGENT_META[agentId] || AGENT_META['@1'];
+      if (activeAgentLogo) activeAgentLogo.src = meta.logo;
+      if (activeAgentName) activeAgentName.textContent = meta.name;
+      triggerPop(activeAgentLogo);
+      triggerPop(activeAgentName);
+    }
+
+    function updateProject(repoName, branch, status) {
+      const meta = REPO_META[repoName] || { iconFile: 'xagent.png', tag: 'Repo', color: '#58a6ff' };
+      activeRepoImg.src = `/icons/${meta.iconFile}`;
+      activeRepoTitle.textContent = repoName;
+      activeRepoTag.textContent = meta.tag;
+      activeRepoTag.style.color = meta.color;
+      activeRepoTag.style.background = meta.color + '22';
+      activeRepoTag.style.border = '1px solid ' + meta.color + '44';
+      activeRepoBranch.textContent = `🌿 ${branch || 'main'}`;
+      if (status) activeRepoStatus.textContent = status;
+      triggerPop(activeRepoImg);
+      triggerPop(activeRepoTitle);
+      triggerPop(activeRepoTag);
+    }
+
+    function updateModel(modelKey) {
+      const meta = MODEL_META[modelKey] || MODEL_META.claude;
+      activeModelLogo.src = meta.logo;
+      activeModelName.textContent = meta.name;
+      activeModelQuota.textContent = meta.quota;
+      triggerPop(activeModelLogo);
+      triggerPop(activeModelName);
+      triggerPop(activeModelQuota);
+    }
+
+    function showReadyBanner() {
+      const repo = activeRepoTitle ? activeRepoTitle.textContent : 'xagent.id';
+      const branch = activeRepoBranch ? activeRepoBranch.textContent.replace('🌿', '').trim() : 'main';
+      const model = activeModelName ? activeModelName.textContent : 'Claude Opus 5.5';
+      terminalOutput.textContent =
+        `⚡ Twin3 Session Console (Real-time Live CLI)\n` +
+        `📌 當前專案: ${repo} (${branch}) | 鎖定引擎: ${model}\n` +
+        `──────────────────────────────────────────────────\n` +
+        `終端連線就緒，等待指令中...\n` +
+        `您可在 LINE 群組輸入「@1 <指示>」或「/progress」發起即時作動，\n` +
+        `真實終端指令與輸出將於此處即時串流呈現。\n`;
+    }
+
+    function appendTerminal(text) {
+      if (!text) return;
+      if (terminalOutput.textContent.includes('終端連線就緒，等待指令中...')) {
+        terminalOutput.textContent = '';
+      }
+      terminalOutput.textContent += text;
+      if (autoScroll) terminalOutput.scrollTop = terminalOutput.scrollHeight;
+    }
+
+    function applyTaskState(state) {
+      if (!state) return;
+      if (state.agent) updateAgent(state.agent);
+      if (state.repo) updateProject(state.repo, state.branch, state.status);
+      if (state.model) updateModel(state.model);
+      const workingBar = document.getElementById('workingBar');
+      const workingDesc = document.getElementById('workingDesc');
+      if (state.status === 'running') {
+        statusDot.className = 'pulse-dot busy';
+        statusText.textContent = '執行中';
+        if (workingBar) workingBar.classList.remove('hidden');
+        if (workingDesc && state.agent) {
+          workingDesc.textContent = `${state.agent} 正在深度檢索代碼庫與分析中...`;
+        }
+        startTimer();
+        startStatusPolling();
+      } else if (state.status === 'completed' || state.done) {
+        statusDot.className = 'pulse-dot';
+        statusText.textContent = '就緒';
+        if (workingBar) workingBar.classList.add('hidden');
+        stopTimer();
+        stopStatusPolling();
+      }
+    }
+
+    const syncBtn = document.getElementById('syncBtn');
+    if (syncBtn) {
+      syncBtn.addEventListener('click', async () => {
+        syncBtn.textContent = '⏳ 同步中...';
+        await refreshSessionStatus();
+        setTimeout(() => { syncBtn.textContent = '🔄 刷新同步'; }, 500);
+      });
+    }
+
+    let statusPollInterval = null;
+    function startStatusPolling() {
+      if (statusPollInterval) return;
+      statusPollInterval = setInterval(async () => {
+        await refreshSessionStatus();
+      }, 2000);
+    }
+
+    function stopStatusPolling() {
+      if (statusPollInterval) {
+        clearInterval(statusPollInterval);
+        statusPollInterval = null;
+      }
+    }
+
+    async function refreshSessionStatus() {
+      try {
+        const res = await fetch(`/api/s/${sessionId}/status?token=${encodeURIComponent(token)}&ticket=${encodeURIComponent(ticket)}`);
+        const data = await res.json();
+        if (data && data.ok) {
+          if (data.backlog && terminalOutput.textContent !== data.backlog) {
+            terminalOutput.textContent = data.backlog;
+            if (autoScroll) terminalOutput.scrollTop = terminalOutput.scrollHeight;
+          }
+          if (data.taskState) {
+            applyTaskState(data.taskState);
+          }
+        }
+      } catch (e) {}
+    }
+
     async function checkDirectAuth() {
       try {
-        const res = await fetch(`/api/s/${sessionId}/status?token=${encodeURIComponent(token)}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.ok) {
-            authModal.classList.add('hidden');
-            renderSession(data);
-            return;
+        const res = await fetch(`/api/s/${sessionId}/status?token=${encodeURIComponent(token)}&ticket=${encodeURIComponent(ticket)}`);
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          authModal.classList.add('hidden');
+          applySessionData(data);
+          if (data.backlog) {
+            terminalOutput.textContent = data.backlog;
+            if (autoScroll) terminalOutput.scrollTop = terminalOutput.scrollHeight;
+          } else {
+            showReadyBanner();
           }
+          if (data.taskState) {
+            applyTaskState(data.taskState);
+          }
+          initLiveStream();
+          return;
+        }
+        if (data && data.blocked) {
+          authModal.classList.add('hidden');
+          groupBlockModal.classList.remove('hidden');
         }
       } catch (e) {}
     }
 
     async function loadSessionData() {
       try {
-        const res = await fetch(`/api/s/${sessionId}/status`, {
-          headers: { 'Authorization': 'Bearer ' + authHeader, 'X-Session-Token': token }
+        const res = await fetch(`/api/s/${sessionId}/status?token=${encodeURIComponent(token)}&ticket=${encodeURIComponent(ticket)}`, {
+          headers: {
+            'Authorization': 'Bearer ' + authHeader,
+            'X-Session-Token': token,
+            'X-Group-Ticket': ticket
+          }
         });
         const data = await res.json();
         if (data.ok) {
-          renderSession(data);
+          applySessionData(data);
+          if (data.backlog) {
+            terminalOutput.textContent = data.backlog;
+            if (autoScroll) terminalOutput.scrollTop = terminalOutput.scrollHeight;
+          }
+          if (data.taskState) {
+            applyTaskState(data.taskState);
+          }
+        } else if (data.blocked) {
+          authModal.classList.add('hidden');
+          groupBlockModal.classList.remove('hidden');
         }
       } catch (e) {}
     }
 
-    function renderSession(data) {
-      currentRepos = data.repos || [];
-      pillsRow.innerHTML = '';
-      currentRepos.forEach((repo, idx) => {
-        const pill = document.createElement('div');
-        pill.className = 'pill' + (idx === selectedRepoIndex ? ' active' : '');
-        pill.textContent = `📦 ${repo.name}`;
-        pill.onclick = () => {
-          selectedRepoIndex = idx;
-          document.querySelectorAll('.pill').forEach((el, i) => el.classList.toggle('active', i === idx));
-          updateActiveRepoMeta();
-        };
-        pillsRow.appendChild(pill);
-      });
-      updateActiveRepoMeta();
+    function applySessionData(data) {
+      const repo = data.activeRepo || (data.repos && data.repos[0]);
+      if (repo) {
+        updateProject(repo.name, repo.branch, repo.status);
+      }
+      if (data.activeModel) {
+        updateModel(data.activeModel);
+      }
       statusText.textContent = '就緒';
-    }
-
-    function updateActiveRepoMeta() {
-      const repo = currentRepos[selectedRepoIndex];
-      if (!repo) return;
-      activeRepoTitle.textContent = repo.name;
-      activeRepoBranch.textContent = `🌿 ${repo.branch || 'main'}`;
     }
 
     let timerInterval = null;
@@ -520,71 +473,45 @@
     }
     function stopTimer() { clearInterval(timerInterval); }
 
-    runBtn.addEventListener('click', async () => {
-      const prompt = promptInput.value.trim();
-      if (!prompt || isExecuting) return;
-
-      const model = modelSelect.value;
-      const repoIdx = selectedRepoIndex;
-      const targetRepo = currentRepos[repoIdx];
-
-      isExecuting = true;
-      runBtn.disabled = true;
-      statusDot.className = 'pulse-dot busy';
-      statusText.textContent = '執行中';
-      terminalOutput.textContent += `\n\n[啟動任務] 專案: ${targetRepo?.name || ''} | 模型: ${model}\n指示: ${prompt}\n${'-'.repeat(40)}\n`;
-      if (autoScroll) terminalOutput.scrollTop = terminalOutput.scrollHeight;
-      startTimer();
-
+    let liveSource = null;
+    function initLiveStream() {
+      if (liveSource) return;
       try {
-        const response = await fetch(`/api/s/${sessionId}/execute`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + authHeader,
-            'X-Session-Token': token
-          },
-          body: JSON.stringify({ prompt, model, repoIndex: repoIdx })
-        });
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const parsed = JSON.parse(line.slice(6));
-                if (parsed.text) {
-                  terminalOutput.textContent += parsed.text;
-                  if (autoScroll) terminalOutput.scrollTop = terminalOutput.scrollHeight;
-                }
-                if (parsed.done) {
-                  if (parsed.diff) {
-                    diffHint.textContent = `📊 變更: ${parsed.diff}`;
-                  }
-                  statusText.textContent = '完成';
-                }
-              } catch (e) {
-                terminalOutput.textContent += line.slice(6) + '\n';
+        liveSource = new EventSource(`/api/s/${sessionId}/live-stream?token=${encodeURIComponent(token)}&ticket=${encodeURIComponent(ticket)}`);
+        liveSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.init) {
+              if (data.backlog) {
+                terminalOutput.textContent = data.backlog;
+                if (autoScroll) terminalOutput.scrollTop = terminalOutput.scrollHeight;
+              } else if (!terminalOutput.textContent.trim()) {
+                showReadyBanner();
               }
+              if (data.taskState) {
+                applyTaskState(data.taskState);
+              }
+              return;
             }
+            if (data.text) {
+              appendTerminal(data.text);
+            }
+            applyTaskState(data);
+            if (data.diff) {
+              diffHint.textContent = `📊 變更: ${data.diff}`;
+            }
+          } catch (e) {
+            appendTerminal(event.data + '\n');
           }
-        }
-      } catch (e) {
-        terminalOutput.textContent += `\n[通訊中斷] ${e.message}\n`;
-        statusText.textContent = '中斷';
-      } finally {
-        isExecuting = false;
-        runBtn.disabled = false;
-        statusDot.className = 'pulse-dot';
-        stopTimer();
-      }
-    });
+        };
+        liveSource.onerror = () => {
+          statusText.textContent = '自動重連中...';
+          try { liveSource.close(); } catch (e) {}
+          liveSource = null;
+          setTimeout(initLiveStream, 1500);
+        };
+      } catch (e) {}
+    }
 
     checkDirectAuth();
   </script>

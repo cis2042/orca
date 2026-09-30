@@ -14,14 +14,42 @@ export function createShareGateway(options = {}) {
   const boundRepos = (options.repos || [process.cwd()]).map((r) => path.resolve(r))
 
   const activeAuthTokens = new Set()
+  const observerClients = new Set()
+  let terminalBuffer = ''
+  let currentTaskState = null
+
+  function broadcastStream(data) {
+    if (data.text) {
+      terminalBuffer += data.text
+      if (terminalBuffer.length > 250000) {
+        terminalBuffer = terminalBuffer.slice(-200000)
+      }
+    }
+    if (data.status || data.agent || data.repo || data.model) {
+      currentTaskState = { ...currentTaskState, ...data }
+    }
+    const payload = `data: ${JSON.stringify(data)}\n\n`
+    for (const client of observerClients) {
+      try {
+        client.write(payload)
+      } catch {
+        observerClients.delete(client)
+      }
+    }
+  }
+
   const lineBot = createLineBotHandler({
     channelAccessToken:
       options.lineChannelAccessToken || process.env.LINE_CHANNEL_ACCESS_TOKEN || '',
     channelSecret: options.lineChannelSecret || process.env.LINE_CHANNEL_SECRET || '',
+    allowedGroups:
+      options.allowedGroups ||
+      (process.env.LINE_ALLOWED_GROUPS ? process.env.LINE_ALLOWED_GROUPS.split(',') : []),
     boundRepos,
     baseUrl: options.baseUrl || `http://localhost:${port}`,
     sessionId,
-    sessionToken: token
+    sessionToken: token,
+    broadcast: broadcastStream
   })
 
   function getRepoMeta(repoPath) {
@@ -76,6 +104,65 @@ export function createShareGateway(options = {}) {
       return
     }
 
+    if (
+      pathname.startsWith('/imagemap/live-stream/') &&
+      (req.method === 'GET' || req.method === 'HEAD')
+    ) {
+      const sizeParam = path.basename(pathname).replace(/\.png$/, '')
+      const imagePath = path.join(
+        path.dirname(new URL(import.meta.url).pathname),
+        'assets',
+        'imagemap',
+        sizeParam
+      )
+      if (fs.existsSync(imagePath)) {
+        res.writeHead(200, {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=86400'
+        })
+        if (req.method === 'HEAD') {
+          res.end()
+          return
+        }
+        fs.createReadStream(imagePath).pipe(res)
+        return
+      }
+      res.writeHead(404, { 'Content-Type': 'text/plain' })
+      res.end('Imagemap image not found')
+      return
+    }
+
+    if (pathname.startsWith('/icons/') && (req.method === 'GET' || req.method === 'HEAD')) {
+      const iconName = path.basename(pathname)
+      const iconPath = path.join(
+        path.dirname(new URL(import.meta.url).pathname),
+        'assets',
+        'icons',
+        iconName
+      )
+      if (fs.existsSync(iconPath)) {
+        res.writeHead(200, {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=86400'
+        })
+        if (req.method === 'HEAD') {
+          res.end()
+          return
+        }
+        fs.createReadStream(iconPath).pipe(res)
+        return
+      }
+      res.writeHead(404, { 'Content-Type': 'text/plain' })
+      res.end('Icon not found')
+      return
+    }
+
+    if (pathname === '/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ ok: true, timestamp: Date.now() }))
+      return
+    }
+
     if (pathname === `/s/${sessionId}`) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
       res.end(htmlContent)
@@ -92,10 +179,23 @@ export function createShareGateway(options = {}) {
           const payload = JSON.parse(body || '{}')
           const submittedToken = payload.token
           const submittedPwd = payload.password
+          const submittedTicket = payload.ticket || req.headers['x-group-ticket'] || ''
           const submittedHash = crypto
             .createHash('sha256')
             .update(submittedPwd || '')
             .digest('hex')
+
+          if (lineBot.hasGroupLock() && !lineBot.validateGroupTicket(submittedTicket)) {
+            res.writeHead(403, { 'Content-Type': 'application/json' })
+            res.end(
+              JSON.stringify({
+                ok: false,
+                blocked: true,
+                error: '群外存取已被阻擋：Web CLI 僅限由授權 LINE 群組產生的連結存取'
+              })
+            )
+            return
+          }
 
           if (submittedToken !== token) {
             res.writeHead(403, { 'Content-Type': 'application/json' })
@@ -131,18 +231,25 @@ export function createShareGateway(options = {}) {
         try {
           const signature = req.headers['x-line-signature'] || ''
           if (!lineBot.verifySignature(body, signature)) {
+            console.log('[LINE Webhook] 401 簽章無效')
             res.writeHead(401, { 'Content-Type': 'application/json' })
             res.end(JSON.stringify({ ok: false, error: 'Invalid signature' }))
             return
           }
           const payload = JSON.parse(body || '{}')
           const events = payload.events || []
+          console.log(`[LINE Webhook] 收到事件數量: ${events.length}`)
           for (const ev of events) {
-            await lineBot.handleWebhookEvent(ev)
+            console.log(
+              `[LINE Webhook] 事件: ${ev.type}, 來源: ${JSON.stringify(ev.source)}, 內容: ${ev.message?.text || ev.message?.type || ''}`
+            )
+            const resAction = await lineBot.handleWebhookEvent(ev)
+            console.log('[LINE Webhook] 處理結果:', resAction)
           }
           res.writeHead(200, { 'Content-Type': 'application/json' })
           res.end(JSON.stringify({ ok: true }))
         } catch (e) {
+          console.log(`[LINE Webhook] 異常: ${e.message}`)
           res.writeHead(500, { 'Content-Type': 'application/json' })
           res.end(JSON.stringify({ ok: false, error: e.message }))
         }
@@ -210,24 +317,83 @@ export function createShareGateway(options = {}) {
     const authHeader = req.headers['authorization'] || ''
     const reqToken = authHeader.replace(/^Bearer\s+/, '')
     const queryToken = parsedUrl.searchParams.get('token')
-    const hasValidAuth = activeAuthTokens.has(reqToken) || (queryToken === token && !password)
+    const queryTicket = parsedUrl.searchParams.get('ticket') || req.headers['x-group-ticket'] || ''
+    const hasValidTicket = queryTicket && lineBot.validateGroupTicket(queryTicket)
+    const hasValidAuth =
+      activeAuthTokens.has(reqToken) || Boolean(hasValidTicket) || queryToken === token
 
     if (pathname.startsWith(`/api/s/${sessionId}/`)) {
-      if (!hasValidAuth && !activeAuthTokens.has(reqToken)) {
+      const isBlocked = lineBot.hasGroupLock() && !hasValidTicket && queryToken !== token
+      if (isBlocked) {
+        res.writeHead(403, { 'Content-Type': 'application/json' })
+        res.end(
+          JSON.stringify({
+            ok: false,
+            blocked: true,
+            error: '群外存取已被阻擋：Web CLI 僅限由授權 LINE 群組產生的連結存取'
+          })
+        )
+        return
+      }
+
+      if (pathname === `/api/s/${sessionId}/live-stream`) {
+        if (!hasValidAuth) {
+          res.writeHead(401, { 'Content-Type': 'application/json' })
+          res.end(
+            JSON.stringify({
+              ok: false,
+              error: '未授權存取'
+            })
+          )
+          return
+        }
+
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive'
+        })
+        observerClients.add(res)
+        res.write(
+          `data: ${JSON.stringify({
+            init: true,
+            backlog: terminalBuffer,
+            taskState: currentTaskState
+          })}\n\n`
+        )
+        req.on('close', () => {
+          observerClients.delete(res)
+        })
+        return
+      }
+
+      if (!hasValidAuth) {
         res.writeHead(401, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify({ ok: false, error: '未授權存取或密碼未解鎖' }))
+        res.end(
+          JSON.stringify({
+            ok: false,
+            error: '未授權存取或密碼未解鎖'
+          })
+        )
         return
       }
 
       if (pathname === `/api/s/${sessionId}/status`) {
         const reposMeta = boundRepos.map(getRepoMeta)
+        const currentRepoIdx = lineBot.getActiveRepoIndex ? lineBot.getActiveRepoIndex() : 0
+        const activeRepo = reposMeta[currentRepoIdx] || reposMeta[0]
+        const activeModel = lineBot.getActiveModel ? lineBot.getActiveModel() : 'claude'
         res.writeHead(200, { 'Content-Type': 'application/json' })
         res.end(
           JSON.stringify({
             ok: true,
             sessionId,
-            repos: reposMeta,
-            models: ['claude', 'gemini', 'codex', 'agent']
+            activeRepo,
+            activeModel,
+            repos: [activeRepo],
+            models: ['claude', 'gpt', 'gemini'],
+            backlog: terminalBuffer,
+            taskState: currentTaskState
           })
         )
         return
