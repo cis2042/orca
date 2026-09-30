@@ -1,4 +1,5 @@
 const DEFAULT_POLL_INTERVAL_MS = 10000
+const DEFAULT_PROGRESS_INTERVAL_MS = 3000
 const REQUEST_TIMEOUT_MS = 15000
 
 export function createCloudAgentRunner(options = {}) {
@@ -7,6 +8,7 @@ export function createCloudAgentRunner(options = {}) {
   const runTask = options.runTask
   const fetchImpl = options.fetchImpl || fetch
   const intervalMs = options.intervalMs || DEFAULT_POLL_INTERVAL_MS
+  const progressIntervalMs = options.progressIntervalMs || DEFAULT_PROGRESS_INTERVAL_MS
   const logger = options.logger || console
   const inFlight = new Map()
   const unsentCompletions = new Map()
@@ -41,15 +43,56 @@ export function createCloudAgentRunner(options = {}) {
     }
   }
 
+  function createProgressPublisher(taskId) {
+    let latest = null
+    let sent = null
+    const flush = async () => {
+      if (latest === null || latest === sent) {
+        return
+      }
+      const snapshot = latest
+      try {
+        await request(`/api/agent/tasks/${encodeURIComponent(taskId)}/output`, {
+          method: 'POST',
+          body: JSON.stringify({ output: snapshot })
+        })
+        sent = snapshot
+      } catch (e) {
+        logger.log(`[cloud-runner] 同步 CLI 畫面失敗 ${taskId}: ${e.message}`)
+      }
+    }
+    const timer = setInterval(flush, progressIntervalMs)
+    return {
+      update(screen) {
+        latest = screen
+      },
+      async close() {
+        clearInterval(timer)
+        await flush()
+      }
+    }
+  }
+
   function startTask(task) {
-    logger.log(`[cloud-runner] 認領任務 ${task.id} ${task.agentId} @ ${task.repoKey}: ${task.text}`)
+    logger.log(
+      `[cloud-runner] 認領任務 ${task.id} ${task.agentId} ${task.engine || ''} @ ${task.repoKey}: ${task.text}`
+    )
+    const progress = createProgressPublisher(task.id)
     const execution = Promise.resolve()
-      .then(() => runTask(task))
+      .then(() => runTask(task, { onProgress: progress.update }))
       .then(
-        (result) => result?.output || '任務已完成',
+        (result) => {
+          if (result?.screen) {
+            progress.update(result.screen)
+          }
+          return result?.output || '任務已完成'
+        },
         (e) => `任務執行失敗: ${e.message}`
       )
-      .then((output) => reportCompletion(task.id, output))
+      .then(async (output) => {
+        await progress.close()
+        await reportCompletion(task.id, output)
+      })
       .finally(() => inFlight.delete(task.id))
     inFlight.set(task.id, execution)
   }

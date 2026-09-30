@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { createCloudAgentRunner } from './cloud-agent-runner.mjs'
+import { EventEmitter } from 'node:events'
 import { createLineBotHandler } from './line-bot.mjs'
+import { createRemoteTaskRunner } from './remote-task-runner.mjs'
+import { createClaudeStreamParser } from './cli-stream-format.mjs'
 
 type Call = { url: string; method: string; auth: string; body: string }
 
@@ -101,30 +104,150 @@ describe('createCloudAgentRunner', () => {
   })
 })
 
-describe('line bot runRemoteTask', () => {
-  it('runs the cloud task in the repo matching its key with the engine for the agent', async () => {
-    const seen: string[][] = []
-    const handler = createLineBotHandler({
+const claudeTranscript = [
+  { type: 'system', subtype: 'hook_started' },
+  { type: 'system', subtype: 'init', model: 'claude-opus-5-5' },
+  { type: 'assistant', message: { content: [{ type: 'thinking', thinking: 'plan' }] } },
+  {
+    type: 'assistant',
+    message: {
+      content: [
+        {
+          type: 'tool_use',
+          name: 'Bash',
+          input: { command: 'echo hello-cli', description: 'Print' }
+        }
+      ]
+    }
+  },
+  { type: 'rate_limit_event' },
+  {
+    type: 'user',
+    message: { content: [{ type: 'tool_result', content: 'hello-cli', is_error: false }] }
+  },
+  { type: 'assistant', message: { content: [{ type: 'text', text: 'DONE' }] } },
+  {
+    type: 'result',
+    subtype: 'success',
+    is_error: false,
+    num_turns: 2,
+    duration_ms: 3997,
+    result: 'DONE'
+  }
+]
+  .map((event) => JSON.stringify(event))
+  .join('\n')
+
+function createFakeSpawn(stdoutChunks: string[], exitCode = 0) {
+  const calls: { cmd: string; args: string[]; cwd: string }[] = []
+  const spawnImpl = (cmd: string, args: string[], opts: { cwd: string }) => {
+    calls.push({ cmd, args, cwd: opts.cwd })
+    const child = new EventEmitter() as EventEmitter & {
+      stdout: EventEmitter
+      stderr: EventEmitter
+    }
+    child.stdout = new EventEmitter()
+    child.stderr = new EventEmitter()
+    setTimeout(() => {
+      child.stderr.emit('data', Buffer.from('Permission allow rule warning\n'))
+      for (const chunk of stdoutChunks) {
+        child.stdout.emit('data', Buffer.from(chunk))
+      }
+      child.emit('close', exitCode)
+    }, 0)
+    return child
+  }
+  return { calls, spawnImpl }
+}
+
+describe('claude stream formatting', () => {
+  it('renders tool calls, results and the final result like a CLI screen', () => {
+    const parser = createClaudeStreamParser()
+    parser.push(claudeTranscript.slice(0, 200))
+    parser.push(claudeTranscript.slice(200))
+    parser.end()
+    expect(parser.getScreen()).toBe(
+      [
+        '▶ Claude Code 啟動（claude-opus-5-5）',
+        '⏺ Bash(echo hello-cli)',
+        '  ⎿ hello-cli',
+        'DONE',
+        '',
+        '━━ ✅ 完成（2 回合，4s）━━'
+      ].join('\n')
+    )
+    expect(parser.getFinalResult()).toBe('DONE')
+    expect(parser.isError()).toBe(false)
+  })
+})
+
+describe('remote task runner', () => {
+  it('runs claude in stream mode in the matching repo and reports the CLI screen and final result', async () => {
+    const fake = createFakeSpawn([claudeTranscript.slice(0, 150), claudeTranscript.slice(150)])
+    const handler = createLineBotHandler({ boundRepos: ['/repos/agent-id', '/repos/XHuman_ID'] })
+    const runRemoteTask = createRemoteTaskRunner({
       boundRepos: ['/repos/agent-id', '/repos/XHuman_ID'],
-      executor: (
-        repo: string,
-        engine: string,
-        prompt: string,
-        done: (r: { output: string }) => void
-      ) => {
-        seen.push([repo, engine, prompt])
-        done({ output: '\u001b[32mall green\u001b[0m' })
+      getContext: handler.getContext,
+      spawnImpl: fake.spawnImpl
+    })
+    const screens: string[] = []
+
+    const result = await runRemoteTask(
+      { id: 't9', agentId: '@2', engine: 'claude', text: 'say done', repoKey: 'XHuman_ID' },
+      { onProgress: (screen: string) => screens.push(screen) }
+    )
+
+    expect(fake.calls[0].cwd).toBe('/repos/XHuman_ID')
+    expect(fake.calls[0].args).toEqual(
+      expect.arrayContaining(['--output-format', 'stream-json', '--verbose'])
+    )
+    expect(result.output).toBe('DONE')
+    expect(result.screen).toContain('⏺ Bash(echo hello-cli)')
+    expect(result.screen).toContain('[進程結束: 狀態碼 0]')
+    expect(result.screen).not.toContain('Permission allow rule')
+    expect(screens.length).toBeGreaterThan(1)
+    expect(handler.getContext('cloud').agentTasks['@2'].status).toBe('completed')
+  })
+
+  it('falls back to the agent default engine and surfaces stderr when a plain engine fails', async () => {
+    const fake = createFakeSpawn(['partial output\n'], 2)
+    const runRemoteTask = createRemoteTaskRunner({
+      boundRepos: ['/repos/agent-id'],
+      getContext: createLineBotHandler({ boundRepos: ['/repos/agent-id'] }).getContext,
+      spawnImpl: fake.spawnImpl
+    })
+
+    const result = await runRemoteTask({ id: 't10', agentId: '@3', text: 'x', repoKey: 'unknown' })
+    expect(fake.calls[0].args[0]).toBe('-p')
+    expect(fake.calls[0].cwd).toBe('/repos/agent-id')
+    expect(result.screen).toContain('partial output')
+    expect(result.screen).toContain('[進程結束: 狀態碼 2]')
+  })
+
+  it('streams progress to the cloud before reporting completion', async () => {
+    const cloud = createFakeCloud([{ id: 't11', agentId: '@1', text: 'go', repoKey: 'agent-id' }])
+    const runner = createCloudAgentRunner({
+      baseUrl: 'https://bridge.example',
+      token: 'secret',
+      fetchImpl: cloud.fetchImpl,
+      logger: silentLogger,
+      progressIntervalMs: 5,
+      runTask: async (_task: unknown, hooks: { onProgress: (s: string) => void }) => {
+        hooks.onProgress('step 1')
+        await new Promise((r) => setTimeout(r, 20))
+        return { output: 'final', screen: 'step 1\nfinal screen' }
       }
     })
 
-    const result = await handler.runRemoteTask({
-      id: 't3',
-      agentId: '@2',
-      text: 'review',
-      repoKey: 'XHuman_ID'
-    })
-    expect(seen).toEqual([['/repos/XHuman_ID', 'gpt', 'review']])
-    expect(result.output).toBe('all green')
-    expect(handler.getContext('cloud').agentTasks['@2'].status).toBe('completed')
+    await runner.pollOnce()
+    await runner.waitForIdle()
+    const outputs = cloud.calls.filter((c) => c.url.endsWith('/t11/output'))
+    expect(outputs.map((c) => JSON.parse(c.body).output)).toEqual([
+      'step 1',
+      'step 1\nfinal screen'
+    ])
+    const lastOutputIndex = cloud.calls.lastIndexOf(outputs.at(-1)!)
+    const completeIndex = cloud.calls.findIndex((c) => c.url.endsWith('/t11/complete'))
+    expect(completeIndex).toBeGreaterThan(lastOutputIndex)
   })
 })

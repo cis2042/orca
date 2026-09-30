@@ -612,7 +612,7 @@ export function createLineBotHandler(options = {}) {
     }
   }
 
-  const runRemoteTask = createRemoteTaskRunner({ boundRepos, getContext, executeTaskProcess })
+  const runRemoteTask = createRemoteTaskRunner({ boundRepos, getContext })
 
   async function sendDeployNotification(to, info = {}) {
     const text = `🚀【CI/CD 部署通報】\n專案：${info.repo || 'twin3'}\n狀態：${info.status || 'Success'}\nCommit：${info.commit || 'HEAD'}${info.message ? `\n說明：${info.message}` : ''}${info.url ? `\n連結：${info.url}` : ''}`
