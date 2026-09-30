@@ -93,7 +93,12 @@ export function createCloudAgentRunner(options = {}) {
         await progress.close()
         await reportCompletion(task.id, output)
       })
-      .finally(() => inFlight.delete(task.id))
+      .finally(() => {
+        inFlight.delete(task.id)
+        if (timer) {
+          setTimeout(pollOnce, 0)
+        }
+      })
     inFlight.set(task.id, execution)
   }
 
@@ -106,7 +111,11 @@ export function createCloudAgentRunner(options = {}) {
       for (const [taskId, output] of unsentCompletions) {
         await reportCompletion(taskId, output)
       }
-      const body = await request('/api/agent/tasks')
+      if (inFlight.size > 0) {
+        await request('/api/agent/heartbeat', { method: 'POST', body: '{}' })
+        return { busy: true }
+      }
+      const body = await request('/api/agent/tasks?limit=1')
       const tasks = Array.isArray(body.tasks) ? body.tasks : []
       for (const task of tasks) {
         if (!inFlight.has(task.id)) {

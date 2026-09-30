@@ -21,7 +21,7 @@ function createFakeCloud(tasks: Record<string, unknown>[], failCompletions = 0) 
       auth: headers.Authorization,
       body: String(init.body || '')
     })
-    if (url.endsWith('/api/agent/tasks')) {
+    if (url.includes('/api/agent/tasks?limit=1')) {
       const batch = tasks.splice(0)
       return new Response(JSON.stringify({ ok: true, tasks: batch }), {
         status: 200
@@ -60,7 +60,7 @@ describe('createCloudAgentRunner', () => {
 
     expect(ran).toHaveLength(1)
     expect(cloud.calls[0]).toMatchObject({
-      url: 'https://bridge.example/api/agent/tasks',
+      url: 'https://bridge.example/api/agent/tasks?limit=1',
       auth: 'Bearer secret'
     })
     const completion = cloud.calls.find((c) => c.url.endsWith('/api/agent/tasks/t1/complete'))
@@ -308,5 +308,31 @@ describe('createCloudRunnerFromEnv', () => {
     await runner!.waitForIdle()
     const outputs = cloud.calls.filter((c) => c.url.endsWith('/t12/output'))
     expect(outputs.map((c) => JSON.parse(c.body).output)).toContain('live screen')
+  })
+})
+
+describe('serial execution', () => {
+  it('only sends a heartbeat while a task is running and claims the next one after it finishes', async () => {
+    const cloud = createFakeCloud([{ id: 's1', agentId: '@1', text: 'one', repoKey: 'agent-id' }])
+    let release: () => void = () => {}
+    const runner = createCloudAgentRunner({
+      baseUrl: 'https://bridge.example',
+      token: 'secret',
+      fetchImpl: cloud.fetchImpl,
+      logger: silentLogger,
+      runTask: () => new Promise((resolve) => (release = () => resolve({ output: 'ok' })))
+    })
+
+    expect(await runner.pollOnce()).toEqual({ claimed: 1 })
+    expect(await runner.pollOnce()).toEqual({ busy: true })
+    const claimCalls = cloud.calls.filter((c) => c.url.includes('/api/agent/tasks?limit=1'))
+    expect(claimCalls).toHaveLength(1)
+    expect(
+      cloud.calls.some((c) => c.url.endsWith('/api/agent/heartbeat') && c.method === 'POST')
+    ).toBe(true)
+
+    release()
+    await runner.waitForIdle()
+    expect(await runner.pollOnce()).toEqual({ claimed: 0 })
   })
 })
