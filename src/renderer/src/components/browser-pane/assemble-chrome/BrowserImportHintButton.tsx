@@ -27,10 +27,12 @@ import { translate } from '@/i18n/i18n'
 
 type BrowserImportHintButtonProps = {
   profileId: string | null
+  compact?: boolean
 }
 
 export function BrowserImportHintButton({
-  profileId
+  profileId,
+  compact = false
 }: BrowserImportHintButtonProps): React.JSX.Element | null {
   const [open, setOpen] = useState(false)
   const [importMenuOpen, setImportMenuOpen] = useState(false)
@@ -134,11 +136,19 @@ export function BrowserImportHintButton({
 
   const autoImportAttemptedRef = useRef(false)
   useEffect(() => {
-    if (autoImportAttemptedRef.current || !detectedBrowsersLoaded || detectedBrowsers.length === 0) {
+    if (
+      autoImportAttemptedRef.current ||
+      !detectedBrowsersLoaded ||
+      detectedBrowsers.length === 0
+    ) {
       return
     }
     // If this profile has no imported cookies, automatically import from the primary detected local browser
-    if (currentProfile && !currentProfile.source && browserSessionImportState?.status !== 'importing') {
+    if (
+      currentProfile &&
+      !currentProfile.source &&
+      browserSessionImportState?.status !== 'importing'
+    ) {
       autoImportAttemptedRef.current = true
       const primary = detectedBrowsers[0]
       void handleImportFromBrowser(primary.family, primary.selectedProfile)
@@ -226,10 +236,15 @@ export function BrowserImportHintButton({
             }
           }}
         >
-          <Import className="size-3.5 mr-1" />
-          {browserSessionImportState?.status === 'importing'
-            ? 'Syncing…'
-            : translate('auto.components.browser.pane.BrowserImportHintButton.b24fef25be', 'Import')}
+          <Import className={compact ? 'size-3.5' : 'size-3.5 mr-1'} />
+          {compact
+            ? null
+            : browserSessionImportState?.status === 'importing'
+              ? 'Syncing…'
+              : translate(
+                  'auto.components.browser.pane.BrowserImportHintButton.b24fef25be',
+                  'Import'
+                )}
         </Button>
         <PopoverTrigger asChild>
           <Button
