@@ -10,6 +10,10 @@
   },
   "main": "./out/main/index.js",
   "scripts": {
+    "share:session": "node config/scripts/share-session/start-share.mjs",
+    "share:line": "node config/scripts/share-session/start-share.mjs --tunnel",
+    "share:line:test": "vitest run config/scripts/share-session/",
+    "share:line:lint": "oxlint config/scripts/share-session/",
     "install:release": "pnpm install --frozen-lockfile --cpu=current,x64,arm64",
     "audit:perf": "oxlint --config config/oxlint-performance-audit.json --format json src",
     "test:perf:contracts": "vitest run --config config/vitest.performance.config.ts",
