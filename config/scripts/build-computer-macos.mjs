@@ -29,8 +29,18 @@ createHelperApp()
 
 function buildUniversalBinary() {
   const builtBinaries = universalTriples.map((triple) => {
-    run('swift', ['build', '-c', 'release', '--package-path', packagePath, '--triple', triple])
-    return path.join(packagePath, '.build', triple, 'release', 'orca-computer-use-macos')
+    const swiftArgs = ['build', '-c', 'release', '--package-path', packagePath, '--triple', triple]
+    run('swift', swiftArgs)
+    const sliceBinaryPath = path.join(
+      packagePath,
+      '.build',
+      'universal-slices',
+      triple,
+      'orca-computer-use-macos'
+    )
+    mkdirSync(path.dirname(sliceBinaryPath), { recursive: true })
+    copyFileSync(path.join(readSwiftBinPath(swiftArgs), 'orca-computer-use-macos'), sliceBinaryPath)
+    return sliceBinaryPath
   })
   mkdirSync(path.dirname(binaryPath), { recursive: true })
   run('lipo', ['-create', ...builtBinaries, '-output', binaryPath])
@@ -81,6 +91,15 @@ function resolveSigningIdentity() {
     identities.stdout.match(/"([^"]*Developer ID Application:[^"]+)"/) ??
     identities.stdout.match(/"([^"]*Apple Distribution:[^"]+)"/)
   return releaseMatch?.[1] ?? developmentMatch?.[1] ?? '-'
+}
+
+function readSwiftBinPath(swiftArgs) {
+  const result = spawnSync('swift', [...swiftArgs, '--show-bin-path'], { encoding: 'utf8' })
+  if (result.status !== 0) {
+    process.stderr.write(result.stderr ?? '')
+    process.exit(result.status ?? 1)
+  }
+  return result.stdout.trim().split('\n').at(-1)
 }
 
 function run(command, args) {
