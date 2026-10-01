@@ -183,6 +183,13 @@ export type RuntimeTerminalRename = {
   title: string | null
 }
 
+export type RuntimeTerminalGoal = {
+  handle: string
+  tabId: string
+  leafId: string
+  goal: string | null
+}
+
 export type RuntimeTerminalSend = {
   handle: string
   accepted: boolean

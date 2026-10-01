@@ -11,6 +11,7 @@ import type {
   RuntimeTerminalVisualPaneNode,
   RuntimeTerminalVisualTab,
   RuntimeTerminalRead,
+  RuntimeTerminalGoal,
   RuntimeTerminalRename,
   RuntimeTerminalSend,
   RuntimeTerminalShow,
@@ -256,6 +257,12 @@ export function formatTerminalRename(result: { rename: RuntimeTerminalRename }):
   return result.rename.title
     ? `Renamed terminal ${result.rename.handle} to "${result.rename.title}".`
     : `Cleared title for terminal ${result.rename.handle}.`
+}
+
+export function formatTerminalGoal(result: { goal: RuntimeTerminalGoal }): string {
+  return result.goal.goal
+    ? `Goal for terminal ${result.goal.handle}: "${result.goal.goal}".`
+    : `Cleared goal for terminal ${result.goal.handle}.`
 }
 
 export function formatTerminalCreate(result: { terminal: RuntimeTerminalCreate }): string {

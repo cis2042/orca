@@ -11,7 +11,7 @@ import { advertisedUrlWatcher } from '../ports/advertised-url-watcher'
 import { deleteWorktreeHistoryDir } from '../terminal-history-deletion'
 import { closeClientHostedBrowserPagesForWorktree } from './worktree-browser-client-page-close'
 import type { ForceDeleteWorktreeBranchResult } from '../../shared/worktree/create-types'
-import type { RuntimeTerminalRename } from '../../shared/runtime-types'
+import type { RuntimeTerminalGoal, RuntimeTerminalRename } from '../../shared/runtime-types'
 import type { TerminalWorkspaceLaunchScope } from './runtime-legacy-worker-terminal-recovery-types'
 import type { TerminalCreateOptions } from './runtime-terminal-contracts'
 import { isTuiAgentEnabled } from '../../shared/tui-agent-selection'
@@ -145,6 +145,23 @@ export class OrcaRuntimeWithResolveWorktreeRemovalTarget extends OrcaRuntimeWith
     const { leaf } = this.getLiveLeafForHandle(handle)
     this.notifier?.renameTerminal(leaf.tabId, title)
     return { handle, tabId: leaf.tabId, title }
+  }
+
+  async setTerminalGoal(handle: string, goal: string | null): Promise<RuntimeTerminalGoal> {
+    const normalizedGoal = goal?.trim() || null
+    const pty = this.getLivePtyForHandle(handle)
+    const ptyLeaf = pty
+      ? [...this.leaves.values()].find((leaf) => leaf.ptyId === pty.pty.ptyId)
+      : undefined
+    if (pty && !ptyLeaf) {
+      throw new Error('terminal_goal_requires_visible_pane')
+    }
+    if (!ptyLeaf) {
+      this.assertGraphReady()
+    }
+    const leaf = ptyLeaf ?? this.getLiveLeafForHandle(handle).leaf
+    this.notifier?.setTerminalPaneGoal?.(leaf.tabId, leaf.leafId, normalizedGoal)
+    return { handle, tabId: leaf.tabId, leafId: leaf.leafId, goal: normalizedGoal }
   }
 
   protected async resolveAgentTerminalCreateOptions(

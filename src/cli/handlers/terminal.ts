@@ -2,6 +2,7 @@ import type {
   RuntimeTerminalCreate,
   RuntimeTerminalFocus,
   RuntimeTerminalListResult,
+  RuntimeTerminalGoal,
   RuntimeTerminalRead,
   RuntimeTerminalRename,
   RuntimeTerminalShow,
@@ -16,6 +17,7 @@ import {
   formatTerminalList,
   formatTerminalRead,
   formatTerminalReadWithCompaction,
+  formatTerminalGoal,
   formatTerminalRename,
   formatTerminalShow,
   formatTerminalSplit,
@@ -32,6 +34,7 @@ import {
   type WithAnnotatedHostScope
 } from '../omitted-host-scope-selectors'
 import { RuntimeClientError } from '../runtime-client'
+import { callerTerminalHandle } from './terminal-bridge-ops'
 import {
   isSupportedWindowsShellOverride,
   listSupportedWindowsShellOverrides
@@ -159,6 +162,30 @@ export const TERMINAL_HANDLERS: Record<string, CommandHandler> = {
       title: getOptionalStringFlag(flags, 'title') ?? null
     })
     printResult(result, json, formatTerminalRename)
+  },
+  'terminal goal': async ({ flags, client, json, rawArgs }) => {
+    const clear = flags.get('clear') === true
+    const goal = clear
+      ? null
+      : (getOptionalStringFlag(flags, 'text') ?? rawArgs?.join(' ') ?? '').trim()
+    if (!clear && !goal) {
+      throw new RuntimeClientError(
+        'invalid_argument',
+        'Pass the goal text, or --clear to remove it.'
+      )
+    }
+    const terminal = getOptionalStringFlag(flags, 'terminal') ?? callerTerminalHandle()
+    if (!terminal) {
+      throw new RuntimeClientError(
+        'invalid_argument',
+        'Run this inside an Orca terminal, or pass --terminal <handle> to name the pane.'
+      )
+    }
+    const result = await client.call<{ goal: RuntimeTerminalGoal }>('terminal.setGoal', {
+      terminal,
+      goal
+    })
+    printResult(result, json, formatTerminalGoal)
   },
   'terminal create': async ({ flags, client, cwd, json }) => {
     if (client.isRemote && !flags.has('worktree')) {

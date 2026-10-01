@@ -27,7 +27,7 @@ const TERMINAL_PANE_HOOK_SOURCE_PATTERN =
 // Then chat ownership through toggles and restore (#23049) added a `useRef`, a `useLayoutEffect`
 // and a `useEffect` across chat-state, layout-persistence and title-effects (214 hooks, still 7 useMemo).
 const PRE_REFACTOR_HOOK_ORDER_SHA256 =
-  '3736b71c612bb28b9b5298c7704ee1b32c7afc0254e75d0072ff4df870ec3be9'
+  'b1a9f5ba8b09727a0cbb70d68fba9114f95c63f3ebe4cbf41ecb3ae666bc1f01'
 
 const sourceFiles = readdirSync(__dirname)
   .filter((name) => TERMINAL_PANE_HOOK_SOURCE_PATTERN.test(name))
@@ -92,7 +92,7 @@ function readFlattenedHookOrder(): string[] {
 describe('TerminalPane refactor hook parity', () => {
   it('preserves the recursively flattened render hook order', () => {
     const hooks = readFlattenedHookOrder()
-    expect(hooks).toHaveLength(214)
+    expect(hooks).toHaveLength(215)
     expect(hooks.filter((hook) => hook === 'useMemo')).toHaveLength(7)
     expect(createHash('sha256').update(hooks.join('\n')).digest('hex')).toBe(
       PRE_REFACTOR_HOOK_ORDER_SHA256

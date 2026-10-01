@@ -6,6 +6,7 @@ import {
   TerminalRead,
   TerminalRecoverPane,
   TerminalRename,
+  TerminalSetGoal,
   TerminalResolveActive,
   TerminalResolvePane
 } from './unary-schemas'
@@ -106,6 +107,13 @@ export const TERMINAL_QUERY_METHODS = [
     params: TerminalHandle,
     handler: async (params, { runtime }) => ({
       agentStatus: await runtime.getTerminalAgentStatus(params.terminal)
+    })
+  }),
+  defineMethod({
+    name: 'terminal.setGoal',
+    params: TerminalSetGoal,
+    handler: async (params, { runtime }) => ({
+      goal: await runtime.setTerminalGoal(params.terminal, params.goal)
     })
   }),
   defineMethod({

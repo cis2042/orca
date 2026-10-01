@@ -11,6 +11,7 @@ export {
   TerminalRead,
   TerminalRecoverPane,
   TerminalRename,
+  TerminalSetGoal,
   TerminalResolveActive,
   TerminalResolvePane,
   TerminalSend,

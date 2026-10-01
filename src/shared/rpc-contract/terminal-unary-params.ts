@@ -93,6 +93,12 @@ export const TerminalRead = TerminalHandle.extend({
 })
 
 // Why: preserve the legacy contract — `title: string | null` only, `undefined` rejected, so the CLI's "reset" signal stays distinct.
+export const TERMINAL_GOAL_MAX_LENGTH = 120
+
+export const TerminalSetGoal = TerminalHandle.extend({
+  goal: z.string().trim().max(TERMINAL_GOAL_MAX_LENGTH).nullable()
+})
+
 export const TerminalRename = TerminalHandle.extend({
   title: z.custom<string | null>((value) => value === null || typeof value === 'string', {
     message: 'Missing --title (pass empty string or null to reset)'

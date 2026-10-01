@@ -494,6 +494,7 @@ import {
 import {
   AgentTeamsPrepareLaunch,
   AgentTeamsTmuxCompat,
+  TerminalA2ALink,
   TerminalCloseAll,
   TerminalCreateParams,
   TerminalFocus,
@@ -506,6 +507,7 @@ import {
   TerminalResolveActive,
   TerminalResolvePane,
   TerminalSend,
+  TerminalSetGoal,
   TerminalSplit,
   TerminalStopExact,
   TerminalWait
@@ -1118,6 +1120,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'ssh.listTargets': null,
   'stats.summary': null,
   'status.get': null,
+  'terminal.a2aLink': TerminalA2ALink,
   'terminal.adoptOrphans': TerminalAdoptOrphans,
   'terminal.agentStatus': TerminalHandle,
   'terminal.clearBuffer': TerminalHandle,
@@ -1145,6 +1148,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'terminal.send': TerminalSend,
   'terminal.setAutoRestoreFit': TerminalSetAutoRestoreFit,
   'terminal.setDisplayMode': TerminalSetDisplayMode,
+  'terminal.setGoal': TerminalSetGoal,
   'terminal.show': TerminalHandle,
   'terminal.sleep': TerminalCloseAll,
   'terminal.split': TerminalSplit,

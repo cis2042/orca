@@ -13,6 +13,7 @@ import {
   activateTerminalInitiatedWorktree,
   focusTerminalInitiatedTab
 } from './terminal-command-state'
+import { routeTerminalPaneGoal } from '@/components/terminal-pane/terminal-pane-goal-routing'
 
 type RuntimeTerminalSplitRequest = SplitTerminalPaneDetail & { worktreeId?: string }
 
@@ -114,6 +115,8 @@ export function registerTerminalUiRoutingIpcBridge(unsubs: (() => void)[]): void
       useAppStore.getState().setTabCustomTitle(tabId, title)
     })
   )
+
+  unsubs.push(window.api.ui.onSetTerminalPaneGoal(routeTerminalPaneGoal))
 
   unsubs.push(
     window.api.ui.onFocusTerminal(
