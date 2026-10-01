@@ -6,11 +6,7 @@ import { attachMobileMarkdownBridge } from '@/runtime/mobile-markdown-bridge'
 import { resetAgentHookCompletionNotificationCoordinators } from '../agent-hook-completion-notifications'
 import { useAppStore } from '../../store'
 import { useA2AStore } from '../../store/a2a-traces-store'
-import {
-  COMMAND_LINK_DURATION_MS,
-  isCommandLink,
-  type TabTitleLookup
-} from '../../components/a2a/a2a-command-links'
+import { toBridgeAnimationTrace } from '../../components/a2a/a2a-command-links'
 import { registerAgentStatusIpcBridge } from './agent-status-ipc-bridge'
 import { registerBrowserRequestIpcBridge } from './browser-request-ipc-bridge'
 import { registerBrowserStateIpcBridge } from './browser-state-ipc-bridge'
@@ -71,16 +67,7 @@ export function installAppLifetimeIpcEvents(
   if (typeof window !== 'undefined' && window.api?.ui?.onA2ALink) {
     unsubs.push(
       window.api.ui.onA2ALink((trace) => {
-        const commandLink = isCommandLink(trace, lookupTabTitlesFromAppStore)
-        useA2AStore.getState().addTrace(
-          commandLink
-            ? {
-                ...trace,
-                commandLink,
-                durationMs: Math.max(trace.durationMs ?? 0, COMMAND_LINK_DURATION_MS)
-              }
-            : trace
-        )
+        useA2AStore.getState().addTrace(toBridgeAnimationTrace(trace))
       })
     )
   }
@@ -170,17 +157,4 @@ export function installAppLifetimeIpcEvents(
     resetAgentHookCompletionNotificationCoordinators()
     onCleanupPhase?.('notifications.reset')
   }
-}
-
-const lookupTabTitlesFromAppStore: TabTitleLookup = (worktreeId, tabId) => {
-  const state = useAppStore.getState()
-  const tab = state.tabsByWorktree[worktreeId]?.find((t) => t.id === tabId)
-  const runtimeTitles = state.runtimePaneTitlesByTabId?.[tabId]
-  return [
-    tab?.customTitle,
-    tab?.defaultTitle,
-    tab?.title,
-    tab?.generatedTitle,
-    ...(runtimeTitles ? Object.values(runtimeTitles) : [])
-  ]
 }
