@@ -1,7 +1,18 @@
 import { parseTerminalIndex, type A2ALinkEvent } from '../../../../shared/terminal-a2a-link'
 import { getA2AConnectionMotif, type A2AConnectionMotif } from './A2AConnectionEffects'
 
-export type Point = { x: number; y: number }
+import {
+  findAnchorElement,
+  findAnchorTabTitle,
+  isLinkInScope,
+  resolveOffstageCampPoint,
+  resolvePointFromElement,
+  findTerminalPane,
+  hasUsableTerminalBounds,
+  type Point
+} from './a2a-terminal-elements'
+
+export type { Point }
 
 export type ResolvedLinkGeometry = {
   link: A2ALinkEvent
@@ -35,42 +46,6 @@ export function resolveSessionFallbackPoint(
   const x = left + Math.round((width * (safeIdx * 2 - 1)) / 16)
   const y = top + 42
   return { x, y }
-}
-
-export function hasUsableTerminalBounds(el: HTMLElement): boolean {
-  const rect = el.getBoundingClientRect()
-  return (
-    rect.width > 0 &&
-    rect.height > 0 &&
-    el.getAttribute('aria-hidden') !== 'true' &&
-    el.closest('[aria-hidden="true"]') === null
-  )
-}
-
-export function resolvePointFromElement(el: Element | null): Point | null {
-  if (!(el instanceof HTMLElement) || !hasUsableTerminalBounds(el)) {
-    return null
-  }
-  const rect = el.getBoundingClientRect()
-  return {
-    x: rect.left + rect.width / 2,
-    y: rect.top + rect.height / 2
-  }
-}
-
-export function findTerminalPane(tabId: string): HTMLElement | null {
-  const panes = Array.from(document.querySelectorAll<HTMLElement>('[data-terminal-tab-id]')).filter(
-    (el) => el.dataset.terminalTabId === tabId && hasUsableTerminalBounds(el)
-  )
-
-  return panes.reduce<HTMLElement | null>((largest, pane) => {
-    if (!largest) {
-      return pane
-    }
-    const current = pane.getBoundingClientRect()
-    const previous = largest.getBoundingClientRect()
-    return current.width * current.height > previous.width * previous.height ? pane : largest
-  }, null)
 }
 
 export function findTerminalTabTitle(
@@ -174,10 +149,12 @@ export function resolveLinkGeometries(
   scopeWorktreeId?: string | null
 ): ResolvedLinkGeometry[] {
   return activeLinks.map((link) => {
-    const inSession = !scopeWorktreeId || !link.worktreeId || link.worktreeId === scopeWorktreeId
+    const inSession = isLinkInScope(link, scopeWorktreeId)
     const motif = getA2AConnectionMotif(
       link,
-      findTerminalTabTitle(link.fromIndex, link.from, scopeWorktreeId ?? undefined)
+      link.fromAnchor
+        ? findAnchorTabTitle(link.fromAnchor)
+        : findTerminalTabTitle(link.fromIndex, link.from, scopeWorktreeId ?? undefined)
     )
     if (!inSession) {
       return {
@@ -192,8 +169,12 @@ export function resolveLinkGeometries(
       }
     }
 
-    const elFrom = findTerminalElement(link.fromIndex, link.from, scopeWorktreeId ?? undefined)
-    const elTo = findTerminalElement(link.toIndex, link.to, scopeWorktreeId ?? undefined)
+    const elFrom = link.fromAnchor
+      ? findAnchorElement(link.fromAnchor)
+      : findTerminalElement(link.fromIndex, link.from, scopeWorktreeId ?? undefined)
+    const elTo = link.toAnchor
+      ? findAnchorElement(link.toAnchor)
+      : findTerminalElement(link.toIndex, link.to, scopeWorktreeId ?? undefined)
 
     let p1 = resolvePointFromElement(elFrom)
     let p2 = resolvePointFromElement(elTo)
@@ -217,11 +198,15 @@ export function resolveLinkGeometries(
       findTerminalTabTitle(link.toIndex, link.to, scopeWorktreeId ?? undefined)
     )
 
-    if (!p1 && inSession && hasSourceTab) {
+    if (!p1 && !link.fromAnchor && hasSourceTab) {
       p1 = resolveSessionFallbackPoint(link.fromIndex, link.from)
     }
-    if (!p2 && inSession && hasTargetTab) {
+    if (!p2 && !link.toAnchor && hasTargetTab) {
       p2 = resolveSessionFallbackPoint(link.toIndex, link.to)
+    }
+    if (link.commandLink) {
+      p1 = p1 ?? resolveOffstageCampPoint('from')
+      p2 = p2 ?? resolveOffstageCampPoint('to')
     }
 
     // Zero Phantom Beam: never draw bezier arcs to arbitrary empty space

@@ -7,6 +7,7 @@ import { readRetryRequestFlag } from '../retry-request-flag'
 import { RuntimeClientError } from '../runtime-client'
 import { attachUnverifiedTerminalPromptRecovery } from '../runtime/terminal-prompt-mutation-recovery'
 import { getTerminalHandle } from '../selectors'
+import { callerTerminalHandle, emitA2ATrace } from './terminal-bridge-ops'
 
 type TerminalSendResult = { send: RuntimeTerminalSend; warnings?: string[] }
 
@@ -109,5 +110,16 @@ export const terminalSendHandler: CommandHandler = async ({ flags, client, cwd, 
   )
   if (!result.result.send.accepted) {
     process.exitCode = 1
+    return
+  }
+  const senderHandle = callerTerminalHandle()
+  if (senderHandle && senderHandle !== params.terminal) {
+    await emitA2ATrace(client, {
+      fromDisplay: senderHandle,
+      targetDisplay: params.terminal,
+      handle: params.terminal,
+      type: 'send',
+      text
+    })
   }
 }

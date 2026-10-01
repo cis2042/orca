@@ -31,6 +31,11 @@ export type A2ATracesState = {
     worktreeId?: string
     delivered?: boolean
     executionState?: A2ALinkEvent['executionState']
+    targetHandle?: string
+    fromHandle?: string
+    fromAnchor?: A2ALinkEvent['fromAnchor']
+    toAnchor?: A2ALinkEvent['toAnchor']
+    commandLink?: boolean
   }) => A2ALinkEvent
   removeActiveLink: (id: string) => void
   replayTrace: (id: string) => void
@@ -73,7 +78,12 @@ export const useA2AStore = create<A2ATracesState>((set, get) => ({
       durationMs,
       worktreeId: input.worktreeId,
       delivered: input.delivered,
-      executionState: input.executionState
+      executionState: input.executionState,
+      targetHandle: input.targetHandle,
+      fromHandle: input.fromHandle,
+      fromAnchor: input.fromAnchor,
+      toAnchor: input.toAnchor,
+      commandLink: input.commandLink
     }
 
     if (!a2aTransmissionLanded(event)) {

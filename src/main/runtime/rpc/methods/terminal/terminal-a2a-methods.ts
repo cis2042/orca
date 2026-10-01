@@ -5,6 +5,7 @@ import {
   type A2ALinkEvent
 } from '../../../../../shared/terminal-a2a-link'
 import { TerminalA2ALink } from './unary-schemas'
+import { resolveA2ALinkAnchors } from './a2a-link-anchors'
 
 export const TERMINAL_A2A_METHODS = [
   defineMethod({
@@ -65,17 +66,22 @@ export const TERMINAL_A2A_METHODS = [
       }
 
       let worktreeId = params.worktreeId
-      if (!worktreeId && ctx?.runtime) {
+      let anchors: ReturnType<typeof resolveA2ALinkAnchors> = {}
+      if (ctx?.runtime) {
         try {
           const listRes = await ctx.runtime.listTerminals(undefined)
-          const matched = (listRes?.terminals ?? []).find(
-            (t) =>
-              (targetHandle && t.handle === targetHandle) ||
-              (params.toIndex && t.index === params.toIndex) ||
-              (params.targetHandle && t.handle === params.targetHandle)
-          )
-          if (matched?.worktreeId) {
-            worktreeId = matched.worktreeId
+          const terminals = listRes?.terminals ?? []
+          anchors = resolveA2ALinkAnchors(terminals, {
+            fromHandle: params.fromHandle,
+            toHandle: targetHandle ?? params.targetHandle
+          })
+          if (!worktreeId) {
+            const matched =
+              anchors.toAnchor ??
+              terminals.find((t) => params.toIndex !== undefined && t.index === params.toIndex)
+            if (matched?.worktreeId) {
+              worktreeId = matched.worktreeId
+            }
           }
         } catch {
           // Best effort
@@ -99,7 +105,9 @@ export const TERMINAL_A2A_METHODS = [
         targetHandle,
         bytesWritten,
         executionState,
-        error: errorMessage
+        error: errorMessage,
+        ...(params.fromHandle ? { fromHandle: params.fromHandle } : {}),
+        ...anchors
       }
 
       broadcastA2ALink(event)

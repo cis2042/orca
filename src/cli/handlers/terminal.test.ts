@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { RuntimeClientError, type RuntimeClient } from '../runtime-client'
 import {
   TERMINAL_CREATE_SHELL_SELECTION_RUNTIME_CAPABILITY,
@@ -268,9 +268,65 @@ describe('terminal send CLI', () => {
       })
     }) as unknown as RuntimeClient
 
+  beforeEach(() => {
+    vi.stubEnv('ORCA_TERMINAL_HANDLE', '')
+  })
+
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllEnvs()
     process.exitCode = ORIGINAL_EXIT_CODE
+  })
+
+  it('traces terminal-to-terminal sends from a terminal so the connection beam animates', async () => {
+    vi.stubEnv('ORCA_TERMINAL_HANDLE', 'term-general')
+    const call = vi.fn().mockResolvedValue({
+      result: { send: { handle: 'term-soldier', accepted: true, bytesWritten: 4 } }
+    })
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    await TERMINAL_HANDLERS['terminal send']({
+      flags: new Map<string, string | true>([
+        ['terminal', 'term-soldier'],
+        ['text', '出兵']
+      ]),
+      client: promptClient(call, false),
+      cwd: '/tmp/worktree',
+      json: true
+    })
+
+    expect(call).toHaveBeenCalledWith(
+      'terminal.a2aLink',
+      expect.objectContaining({
+        from: 'term-general',
+        fromHandle: 'term-general',
+        to: 'term-soldier',
+        targetHandle: 'term-soldier',
+        type: 'send',
+        text: '出兵',
+        dispatch: false
+      })
+    )
+  })
+
+  it('does not trace a send that the target refused', async () => {
+    vi.stubEnv('ORCA_TERMINAL_HANDLE', 'term-general')
+    const call = vi.fn().mockResolvedValue({
+      result: { send: { handle: 'term-soldier', accepted: false, bytesWritten: 0 } }
+    })
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    await TERMINAL_HANDLERS['terminal send']({
+      flags: new Map<string, string | true>([
+        ['terminal', 'term-soldier'],
+        ['text', '出兵']
+      ]),
+      client: promptClient(call, false),
+      cwd: '/tmp/worktree',
+      json: true
+    })
+
+    expect(call.mock.calls.some(([method]) => method === 'terminal.a2aLink')).toBe(false)
   })
 
   it('marks combined text and Enter as an agent prompt candidate', async () => {

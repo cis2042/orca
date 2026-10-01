@@ -261,6 +261,7 @@ export const TerminalA2ALink = z.object({
   dispatch: z.boolean().optional(),
   delivered: z.boolean().optional(),
   targetHandle: OptionalString,
+  fromHandle: OptionalString,
   bytesWritten: z.number().optional(),
   executionState: z.enum(['delivered', 'executing', 'failed', 'simulated']).optional(),
   error: OptionalString,

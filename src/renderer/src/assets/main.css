@@ -3527,22 +3527,25 @@ html.native-shell .app-layout {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .a2a-link-beam-flow,
-  .a2a-link-beam-flow-core,
-  .a2a-motif-tornado-spin,
-  .a2a-motif-moonlight-spark,
-  .a2a-motif-gold-ring,
-  .a2a-motif-blossom-bloom,
-  .a2a-motif-bolt,
-  .a2a-motif-bolt-arc {
+  .a2a-link-beam:not([data-command-link='true'])
+    :is(
+      .a2a-link-beam-flow,
+      .a2a-link-beam-flow-core,
+      .a2a-motif-tornado-spin,
+      .a2a-motif-moonlight-spark,
+      .a2a-motif-gold-ring,
+      .a2a-motif-blossom-bloom,
+      .a2a-motif-bolt,
+      .a2a-motif-bolt-arc
+    ) {
     animation: none !important;
   }
 
-  .a2a-link-beam-pulse {
+  .a2a-link-beam:not([data-command-link='true']) .a2a-link-beam-pulse {
     display: none;
   }
 
-  .a2a-connection-effects {
+  .a2a-link-beam:not([data-command-link='true']) .a2a-connection-effects {
     display: none;
   }
 }

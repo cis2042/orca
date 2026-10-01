@@ -5,6 +5,7 @@ import { useA2AStore } from '../../store/a2a-traces-store'
 import { useAppStore } from '../../store'
 import { A2AConnectionEffects, MOTIF_PALETTES } from './A2AConnectionEffects'
 import { resolveLinkGeometries, type ResolvedLinkGeometry, type Point } from './a2a-geometry'
+import { isLinkInScope } from './a2a-terminal-elements'
 
 export function A2AConnectionOverlay(): React.JSX.Element | null {
   const activeLinks = useA2AStore((s) => s.activeLinks)
@@ -29,9 +30,7 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
     }
   }, [activeLinks.length])
 
-  const sessionLinks = activeLinks.filter(
-    (link) => !activeWorktreeId || !link.worktreeId || link.worktreeId === activeWorktreeId
-  )
+  const sessionLinks = activeLinks.filter((link) => isLinkInScope(link, activeWorktreeId))
   const geometries: ResolvedLinkGeometry[] = resolveLinkGeometries(sessionLinks, activeWorktreeId)
 
   return (
@@ -121,6 +120,7 @@ export function A2AConnectionOverlay(): React.JSX.Element | null {
                 <g
                   key={link.id}
                   className={`a2a-link-beam a2a-link-beam-${motif}`}
+                  data-command-link={link.commandLink ? 'true' : undefined}
                   role="group"
                   aria-label={`#${link.fromIndex ?? link.from} → #${link.toIndex ?? link.to} (${palette.label})`}
                 >

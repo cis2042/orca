@@ -75,6 +75,17 @@ export async function resolveSenderIdentity(
   return { from: 'orca-cli', handle: 'caller', worktreeLabel }
 }
 
+export function toA2AWorktreeId(worktree: string | undefined): string | undefined {
+  if (!worktree || /^(path|name|branch):/.test(worktree)) {
+    return undefined
+  }
+  return worktree.replace(/^id:/, '')
+}
+
+export function callerTerminalHandle(): string | undefined {
+  return process.env.ORCA_TERMINAL_HANDLE || undefined
+}
+
 export async function emitA2ATrace(
   client: HandlerContext['client'],
   args: {
@@ -88,10 +99,11 @@ export async function emitA2ATrace(
 ): Promise<void> {
   const fromIndex = parseTerminalIndex(args.fromDisplay)
   const toIndex = parseTerminalIndex(args.targetDisplay)
-  const worktreeId = args.worktree ? args.worktree.replace(/^id:/, '') : undefined
+  const worktreeId = toA2AWorktreeId(args.worktree)
   await client
     .call<{ ok: boolean; id: string }>('terminal.a2aLink', {
       from: args.fromDisplay,
+      fromHandle: callerTerminalHandle(),
       to: args.targetDisplay,
       fromIndex,
       toIndex,
@@ -215,13 +227,14 @@ export const bridgeTraceHandler: CommandHandler = async (ctx) => {
 
   const res = await ctx.client.call<{ ok: boolean; id: string }>('terminal.a2aLink', {
     from: sender.from,
+    fromHandle: customFrom ? undefined : callerTerminalHandle(),
     to: targetDisplay,
     fromIndex,
     toIndex,
     type: traceType,
     text: text || undefined,
     targetHandle: handle,
-    worktreeId: worktree ? worktree.replace(/^id:/, '') : undefined,
+    worktreeId: toA2AWorktreeId(worktree),
     timestamp: Date.now(),
     dispatch: false,
     delivered: true,

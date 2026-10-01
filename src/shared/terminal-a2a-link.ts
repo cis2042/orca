@@ -2,6 +2,15 @@ import type { AgentSessionWriteAim } from './agent-session-pty-write-admission'
 
 export type A2ALinkType = 'send' | 'message' | 'type' | 'keys'
 
+export type A2ALinkAnchor = {
+  handle: string
+  ptyId: string | null
+  tabId: string
+  leafId: string
+  worktreeId: string
+  title: string | null
+}
+
 export type A2ALinkEvent = {
   id: string
   from: string
@@ -24,6 +33,10 @@ export type A2ALinkEvent = {
   expectedAgentSession?: AgentSessionWriteAim
   /** Worktree session this link belongs to. Indexes repeat in every session. */
   worktreeId?: string
+  fromHandle?: string
+  fromAnchor?: A2ALinkAnchor
+  toAnchor?: A2ALinkAnchor
+  commandLink?: boolean
 }
 
 export function a2aEventInSession(
