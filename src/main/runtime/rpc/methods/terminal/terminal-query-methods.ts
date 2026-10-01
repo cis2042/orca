@@ -129,5 +129,12 @@ export const TERMINAL_QUERY_METHODS = [
     handler: async (params, { runtime }) => ({
       clear: await runtime.clearTerminalBuffer(params.terminal)
     })
+  }),
+  defineMethod({
+    name: 'terminal.resetInputModes',
+    params: TerminalHandle,
+    handler: async (params, { runtime }) => ({
+      reset: await runtime.resetTerminalInputModes(params.terminal)
+    })
   })
 ]

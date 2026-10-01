@@ -40,13 +40,17 @@ export const TERMINAL_A2A_METHODS = [
               messageToSend = `${header} ${params.text}`
             }
 
-            const sendRes = await ctx.runtime.sendTerminal(targetHandle, {
-              text: messageToSend,
-              enter: params.type !== 'type',
-              ...(params.expectedAgentSession
-                ? { expectedAgentSession: params.expectedAgentSession }
-                : {})
-            })
+            const sendRes = await ctx.runtime.sendTerminal(
+              targetHandle,
+              {
+                text: messageToSend,
+                enter: params.type !== 'type',
+                ...(params.expectedAgentSession
+                  ? { expectedAgentSession: params.expectedAgentSession }
+                  : {})
+              },
+              { inputKind: 'driving' }
+            )
 
             delivered = sendRes?.accepted ?? true
             bytesWritten = sendRes?.bytesWritten ?? messageToSend.length

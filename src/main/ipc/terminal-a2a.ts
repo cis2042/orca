@@ -1,3 +1,4 @@
+import type { TerminalInputKind } from '../../shared/terminal-input-kind'
 import { BrowserWindow, ipcMain } from 'electron'
 import { resolveA2ADispatchTarget, type A2ALinkEvent } from '../../shared/terminal-a2a-link'
 
@@ -42,8 +43,12 @@ type RuntimeTerminalBridgeLike = {
       text: string
       enter?: boolean
       interrupt?: boolean
-      expectedAgentSession?: { sessionId: string | null; runtimeFence: number | null }
-    }
+      expectedAgentSession?: {
+        sessionId: string | null
+        runtimeFence: number | null
+      }
+    },
+    options: { inputKind: TerminalInputKind }
   ) => Promise<{ accepted?: boolean; bytesWritten?: number } | undefined>
 }
 
@@ -90,13 +95,17 @@ export function registerTerminalA2AHandlers(options?: {
             messageToSend = `${header} ${event.text}`
           }
 
-          const sendRes = await runtime.sendTerminal(targetHandle, {
-            text: messageToSend,
-            enter: event.type !== 'type',
-            ...(event.expectedAgentSession
-              ? { expectedAgentSession: event.expectedAgentSession }
-              : {})
-          })
+          const sendRes = await runtime.sendTerminal(
+            targetHandle,
+            {
+              text: messageToSend,
+              enter: event.type !== 'type',
+              ...(event.expectedAgentSession
+                ? { expectedAgentSession: event.expectedAgentSession }
+                : {})
+            },
+            { inputKind: 'driving' }
+          )
 
           delivered = sendRes?.accepted ?? true
           bytesWritten = sendRes?.bytesWritten ?? messageToSend.length

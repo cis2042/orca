@@ -15,7 +15,10 @@ const SESSION_ID = 'session-alpha-1'
 const AIM: AgentSessionWriteAim = { sessionId: SESSION_ID, runtimeFence: 7 }
 
 function bindSession(): void {
-  const lease = agentSessionLeaseFixture({ sessionId: SESSION_ID, runtimeFence: 7 })
+  const lease = agentSessionLeaseFixture({
+    sessionId: SESSION_ID,
+    runtimeFence: 7
+  })
   agentSessionPtyWriteGate.attachRecordLookup((sessionId) =>
     sessionId === lease.sessionId ? agentSessionRecordFixture(lease) : null
   )
@@ -35,7 +38,10 @@ describe('terminal writes pinned to an agent session', () => {
       return true
     })
 
-    await writer.writeAction(PTY_ID, { text: 'hello' }, 'hello', { expectedAgentSession: AIM })
+    await writer.writeAction(PTY_ID, { text: 'hello' }, 'hello', {
+      inputKind: 'driving',
+      expectedAgentSession: AIM
+    })
 
     expect(writes).toEqual([`${PTY_ID}:hello`])
   })
@@ -50,6 +56,7 @@ describe('terminal writes pinned to an agent session', () => {
 
     await expect(
       writer.writeAction(PTY_ID, { text: 'hello' }, 'hello', {
+        inputKind: 'driving',
         expectedAgentSession: { sessionId: 'session-beta-2', runtimeFence: 7 }
       })
     ).rejects.toBeInstanceOf(AgentSessionPtyWriteRefusedError)
@@ -64,7 +71,9 @@ describe('terminal writes pinned to an agent session', () => {
       return true
     })
 
-    await writer.writeAction(PTY_ID, { text: 'hello' }, 'hello')
+    await writer.writeAction(PTY_ID, { text: 'hello' }, 'hello', {
+      inputKind: 'driving'
+    })
 
     expect(writes).toEqual(['hello'])
   })

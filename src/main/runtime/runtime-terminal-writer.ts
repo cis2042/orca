@@ -6,12 +6,14 @@ import {
   type AgentSessionWriteAim
 } from '../../shared/agent-session-pty-write-admission'
 import { iterateTerminalInputChunks } from '../../shared/terminal-input'
+import type { TerminalInputKind } from '../../shared/terminal-input-kind'
 import {
   agentSessionPtyWriteGate,
   type AgentSessionPtyWriteAdmittance
 } from './agent-session-pty-write-gate'
 
 export type RuntimeTerminalWriteOptions = {
+  inputKind: TerminalInputKind
   signal?: AbortSignal
   beforeWrite?: (ptyId: string) => void | Promise<void>
   reserveWrite?: (ptyId: string) => void
@@ -23,7 +25,7 @@ export type RuntimeTerminalWriteOptions = {
 
 export class RuntimeTerminalWriter {
   constructor(
-    private readonly write: (ptyId: string, data: string) => boolean,
+    private readonly write: (ptyId: string, data: string, inputKind: TerminalInputKind) => boolean,
     private readonly getWriteHostPlatform: (ptyId: string) => NodeJS.Platform = () =>
       process.platform,
     private readonly getAgent: (ptyId: string) => TuiAgent | null = () => null
@@ -33,7 +35,7 @@ export class RuntimeTerminalWriter {
     ptyId: string,
     action: { text?: string; enter?: boolean; interrupt?: boolean },
     payload: string,
-    options: RuntimeTerminalWriteOptions = {}
+    options: RuntimeTerminalWriteOptions
   ): Promise<AgentSessionPtyWriteAdmittance> {
     // Why: the lease is checked before the mobile floor is reserved, so a refused send never takes
     // a claim it will not use.
@@ -73,7 +75,7 @@ export class RuntimeTerminalWriter {
       }
       this.assertStillAimed(ptyId, admitted, options.expectedAgentSession)
       options.reserveWrite?.(ptyId)
-      if (!this.write(ptyId, suffix)) {
+      if (!this.write(ptyId, suffix, options.inputKind)) {
         throw new Error(options.suffixFailureError ?? 'terminal_not_writable')
       }
       await options.afterWrite?.(ptyId)
@@ -85,7 +87,7 @@ export class RuntimeTerminalWriter {
     await options.beforeWrite?.(ptyId)
     this.assertStillAimed(ptyId, admitted, options.expectedAgentSession)
     options.reserveWrite?.(ptyId)
-    if (!this.write(ptyId, payload)) {
+    if (!this.write(ptyId, payload, options.inputKind)) {
       throw new Error('terminal_not_writable')
     }
     await options.afterWrite?.(ptyId)
@@ -111,7 +113,7 @@ export class RuntimeTerminalWriter {
   async writeChunks(
     ptyId: string,
     text: string,
-    options: RuntimeTerminalWriteOptions = {},
+    options: RuntimeTerminalWriteOptions,
     admitted: AgentSessionPtyWriteAdmittance = agentSessionPtyWriteGate.assertAdmitted(ptyId)
   ): Promise<void> {
     const chunks = iterateTerminalInputChunks(text)
@@ -125,7 +127,7 @@ export class RuntimeTerminalWriter {
       await options.beforeWrite?.(ptyId)
       this.assertStillAimed(ptyId, admitted, options.expectedAgentSession)
       options.reserveWrite?.(ptyId)
-      if (!this.write(ptyId, chunk.value)) {
+      if (!this.write(ptyId, chunk.value, options.inputKind)) {
         throw new Error('terminal_not_writable')
       }
       await options.afterWrite?.(ptyId)

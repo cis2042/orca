@@ -93,7 +93,8 @@ describe('TERMINAL_A2A_METHODS', () => {
       expect.objectContaining({
         text: 'echo "hello"',
         enter: true
-      })
+      }),
+      { inputKind: 'driving' }
     )
 
     const aim = { sessionId: 'session-alpha-1', runtimeFence: 7 }
@@ -110,7 +111,8 @@ describe('TERMINAL_A2A_METHODS', () => {
     )
     expect(mockSendTerminal).toHaveBeenCalledWith(
       'term-2',
-      expect.objectContaining({ expectedAgentSession: aim })
+      expect.objectContaining({ expectedAgentSession: aim }),
+      { inputKind: 'driving' }
     )
 
     const ambiguousSend = vi.fn()
@@ -144,7 +146,13 @@ describe('TERMINAL_A2A_METHODS', () => {
     expect(scoped.delivered).toBe(true)
     expect(scoped.targetHandle).toBe('pane-b')
     expect(ambiguousRuntime.listTerminals).toHaveBeenCalledWith('id:session-b')
-    expect(ambiguousSend).toHaveBeenCalledWith('pane-b', expect.objectContaining({ text: 'here' }))
+    expect(ambiguousSend).toHaveBeenCalledWith(
+      'pane-b',
+      expect.objectContaining({ text: 'here' }),
+      {
+        inputKind: 'driving'
+      }
+    )
 
     broadcastSpy.mockRestore()
   })

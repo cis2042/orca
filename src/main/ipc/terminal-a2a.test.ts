@@ -118,7 +118,8 @@ describe('terminal-a2a IPC', () => {
     expect(res.targetHandle).toBe('term-3')
     expect(mockSendTerminal).toHaveBeenCalledWith(
       'term-3',
-      expect.objectContaining({ text: 'git status', enter: true })
+      expect.objectContaining({ text: 'git status', enter: true }),
+      { inputKind: 'driving' }
     )
 
     mockRuntime.listTerminals.mockResolvedValue({
@@ -160,7 +161,8 @@ describe('terminal-a2a IPC', () => {
     expect(mockRuntime.listTerminals).toHaveBeenCalledWith('id:session-a')
     expect(mockSendTerminal).toHaveBeenCalledWith(
       'pane-a',
-      expect.objectContaining({ text: 'stay here' })
+      expect.objectContaining({ text: 'stay here' }),
+      { inputKind: 'driving' }
     )
   })
 })
